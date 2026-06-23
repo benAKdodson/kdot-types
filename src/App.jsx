@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import { RotateCcw } from 'lucide-react';
 
 const WORDS = [
-  "love",
-  "smile",
+  "dear",
+  "kerrianne.",
   "cake",
   "music",
   "dance",
   "flowers",
   "present",
   "sparkle",
-  "kerrianne",
   "surprise",
   "higgledypiggledy",
 ];

@@ -1,20 +1,29 @@
-import { Pause, Play, RotateCcw } from "lucide-react";
-
-import { formatCountdown } from "../helpers.js";
-import { MAX_HEALTH } from "../game.js";
-import KeyTitle from "./KeyTitle.jsx";
+import heartFullSrc from '../Assets/Heart-full-border.png';
+import pauseButtonSrc from '../Assets/Pause-Button.png';
+import playButtonSrc from '../Assets/Play-Button.png';
+import restartButtonSrc from '../Assets/Restart-Button.png';
+import { MAX_HEALTH } from '../game.js';
+import { formatCountdown } from '../helpers.js';
+import KeyTitle from './KeyTitle.jsx';
 
 function TopHud({
   health,
   isTimerPausable,
   isTimerPaused,
+  isTitleIdleAnimationEnabled,
   onRestart,
   onToggleTimerPause,
   tenthsRemaining,
+  titlePatternRequest,
 }) {
+  const countdownLabel = formatCountdown(tenthsRemaining);
+
   return (
     <div className="top-hud">
-      <KeyTitle />
+      <KeyTitle
+        isIdleAnimationEnabled={isTitleIdleAnimationEnabled}
+        patternRequest={titlePatternRequest}
+      />
 
       <div className="ui-bar" aria-label="Typing test controls">
         <div
@@ -27,16 +36,16 @@ function TopHud({
               className={index < health ? "" : "heart-lost"}
               key={index}
             >
-              ❤️
+              <img alt="" className="heart-icon" src={heartFullSrc} />
             </span>
           ))}
         </div>
 
         <div
-          aria-label={`${formatCountdown(tenthsRemaining)} seconds remaining`}
+          aria-label={`${countdownLabel} seconds remaining`}
           className="timer-count"
         >
-          {formatCountdown(tenthsRemaining)}
+          <span className="pixel-text timer-count-text">{countdownLabel}</span>
         </div>
 
         <button
@@ -48,11 +57,12 @@ function TopHud({
           onClick={onToggleTimerPause}
           type="button"
         >
-          {isTimerPaused ? (
-            <Play aria-hidden="true" fill="currentColor" size={16} />
-          ) : (
-            <Pause aria-hidden="true" size={17} strokeWidth={2.25} />
-          )}
+          <img
+            alt=""
+            aria-hidden="true"
+            className="pixel-button-icon"
+            src={isTimerPaused ? playButtonSrc : pauseButtonSrc}
+          />
         </button>
 
         <button
@@ -61,7 +71,12 @@ function TopHud({
           onClick={onRestart}
           type="button"
         >
-          <RotateCcw aria-hidden="true" size={18} strokeWidth={2.25} />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="pixel-button-icon"
+            src={restartButtonSrc}
+          />
         </button>
       </div>
     </div>

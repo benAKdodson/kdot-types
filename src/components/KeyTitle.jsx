@@ -4,11 +4,12 @@ import {
 } from 'react';
 
 import { KEY_SPRITES } from '../Assets/Keys';
-
-const TITLE_KEYS = ["K", "D", "O", "T", " ", "T", "Y", "P", "E", "S"];
-const TITLE_KEY_INDEXES = TITLE_KEYS.map((key, index) =>
-  key === " " ? null : index,
-).filter((index) => index !== null);
+import {
+  getTitleKeyPatternByName,
+  getRandomTitleKeyPattern,
+  getRandomTitlePatternDelayMs,
+  TITLE_KEYS,
+} from '../titleKeyPatterns.js';
 
 function getTitleKeySprite(key, isPressed) {
   const sprite = KEY_SPRITES[key];
@@ -16,36 +17,61 @@ function getTitleKeySprite(key, isPressed) {
   return isPressed ? sprite.pressed : sprite.normal;
 }
 
-function KeyTitle() {
-  const [pressedKeyIndex, setPressedKeyIndex] = useState(null);
+function KeyTitle({ isIdleAnimationEnabled, patternRequest }) {
+  const [pressedKeyIndexes, setPressedKeyIndexes] = useState([]);
 
   useEffect(() => {
-    let pressTimeoutId;
-    let nextPressTimeoutId;
+    let isActive = true;
+    let timeoutId;
 
-    function schedulePress() {
-      const delayMs = 500 + Math.random() * 900;
+    function scheduleNextPattern() {
+      if (!isIdleAnimationEnabled) {
+        setPressedKeyIndexes([]);
+        return;
+      }
 
-      nextPressTimeoutId = window.setTimeout(() => {
-        const keyIndex =
-          TITLE_KEY_INDEXES[Math.floor(Math.random() * TITLE_KEY_INDEXES.length)];
-
-        setPressedKeyIndex(keyIndex);
-
-        pressTimeoutId = window.setTimeout(() => {
-          setPressedKeyIndex(null);
-          schedulePress();
-        }, 220);
-      }, delayMs);
+      timeoutId = window.setTimeout(() => {
+        playPattern(getRandomTitleKeyPattern());
+      }, getRandomTitlePatternDelayMs());
     }
 
-    schedulePress();
+    function playPattern(pattern, frameIndex = 0) {
+      if (!isActive) {
+        return;
+      }
+
+      const frame = pattern.frames[frameIndex];
+
+      if (!frame) {
+        setPressedKeyIndexes([]);
+        scheduleNextPattern();
+        return;
+      }
+
+      setPressedKeyIndexes(frame.keys);
+
+      timeoutId = window.setTimeout(() => {
+        playPattern(pattern, frameIndex + 1);
+      }, frame.durationMs);
+    }
+
+    if (patternRequest) {
+      const requestedPattern = getTitleKeyPatternByName(patternRequest.name);
+
+      if (requestedPattern) {
+        playPattern(requestedPattern);
+      } else {
+        scheduleNextPattern();
+      }
+    } else {
+      scheduleNextPattern();
+    }
 
     return () => {
-      window.clearTimeout(pressTimeoutId);
-      window.clearTimeout(nextPressTimeoutId);
+      isActive = false;
+      window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [isIdleAnimationEnabled, patternRequest]);
 
   return (
     <div aria-label="KDOT TYPES" className="key-title" role="img">
@@ -62,7 +88,7 @@ function KeyTitle() {
             aria-hidden="true"
             className="key-title-sprite"
             key={`${key}-${index}`}
-            src={getTitleKeySprite(key, pressedKeyIndex === index)}
+            src={getTitleKeySprite(key, pressedKeyIndexes.includes(index))}
           />
         );
       })}

@@ -2,6 +2,7 @@ export const MAX_HEALTH = 3;
 export const WORD_TIME_MS = 5000;
 export const WORD_TIME_SECONDS = Math.ceil(WORD_TIME_MS / 1000);
 export const WORD_TIME_TENTHS = WORD_TIME_SECONDS * 10;
+export const START_COUNTDOWN_MS = 3000;
 
 export const WORDS = [
   "dear",
@@ -28,7 +29,19 @@ export function gameReducer(state, action) {
     case "start":
       return {
         ...INITIAL_GAME_STATE,
+        status: "countdown",
+      };
+
+    case "countdown_complete":
+      if (state.status !== "countdown") {
+        return state;
+      }
+
+      return {
+        ...state,
         status: "playing",
+        wordIndex: 0,
+        charIndex: 0,
       };
 
     case "typed_key":

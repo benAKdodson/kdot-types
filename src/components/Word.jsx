@@ -28,19 +28,20 @@ function Word({ charIndex, distance, isActive, offset, word }) {
   ]
     .filter(Boolean)
     .join(" ");
+  const wordContent = isActive
+    ? word.split("").map((letter, index) => (
+        <span
+          className={index < charIndex ? "letter-typed" : "letter-pending"}
+          key={`${letter}-${index}`}
+        >
+          {letter}
+        </span>
+      ))
+    : word;
 
   return (
     <span className={className} style={{ "--letter-count": word.length || 1 }}>
-      {isActive
-        ? word.split("").map((letter, index) => (
-            <span
-              className={index < charIndex ? "letter-typed" : "letter-pending"}
-              key={`${letter}-${index}`}
-            >
-              {letter}
-            </span>
-          ))
-        : word}
+      <span className="pixel-text word-text">{wordContent}</span>
     </span>
   );
 }

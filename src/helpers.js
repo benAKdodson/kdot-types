@@ -2,7 +2,7 @@ export function formatCountdown(tenthsRemaining) {
   const wholeSeconds = Math.floor(tenthsRemaining / 10);
   const decimal = tenthsRemaining % 10;
 
-  return `${String(wholeSeconds)}.${decimal}`;
+  return `${String(wholeSeconds)}:${decimal}`;
 }
 
 export function isInteractiveTarget(target) {

@@ -10,6 +10,83 @@
   --pixel-font-xlarge: 48px;
   --pixel-font-large: 24px;
   --pixel-font-small: 12px;
+  --pixel-font-y-offset: 0.35em;
+  --pixel-corner-path: polygon(
+    0px calc(100% - 15px),
+    3px calc(100% - 15px),
+    3px calc(100% - 9px),
+    6px calc(100% - 9px),
+    6px calc(100% - 6px),
+    9px calc(100% - 6px),
+    9px calc(100% - 3px),
+    15px calc(100% - 3px),
+    15px 100%,
+    calc(100% - 15px) 100%,
+    calc(100% - 15px) calc(100% - 3px),
+    calc(100% - 9px) calc(100% - 3px),
+    calc(100% - 9px) calc(100% - 6px),
+    calc(100% - 6px) calc(100% - 6px),
+    calc(100% - 6px) calc(100% - 9px),
+    calc(100% - 3px) calc(100% - 9px),
+    calc(100% - 3px) calc(100% - 15px),
+    100% calc(100% - 15px),
+    100% 15px,
+    calc(100% - 3px) 15px,
+    calc(100% - 3px) 9px,
+    calc(100% - 6px) 9px,
+    calc(100% - 6px) 6px,
+    calc(100% - 9px) 6px,
+    calc(100% - 9px) 3px,
+    calc(100% - 15px) 3px,
+    calc(100% - 15px) 0px,
+    15px 0px,
+    15px 3px,
+    9px 3px,
+    9px 6px,
+    6px 6px,
+    6px 9px,
+    3px 9px,
+    3px 15px,
+    0px 15px
+  );
+  --pixel-button-corner-path: polygon(
+    0px calc(100% - 10px),
+    2px calc(100% - 10px),
+    2px calc(100% - 6px),
+    4px calc(100% - 6px),
+    4px calc(100% - 4px),
+    6px calc(100% - 4px),
+    6px calc(100% - 2px),
+    10px calc(100% - 2px),
+    10px 100%,
+    calc(100% - 10px) 100%,
+    calc(100% - 10px) calc(100% - 2px),
+    calc(100% - 6px) calc(100% - 2px),
+    calc(100% - 6px) calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 6px),
+    calc(100% - 2px) calc(100% - 6px),
+    calc(100% - 2px) calc(100% - 10px),
+    100% calc(100% - 10px),
+    100% 10px,
+    calc(100% - 2px) 10px,
+    calc(100% - 2px) 6px,
+    calc(100% - 4px) 6px,
+    calc(100% - 4px) 4px,
+    calc(100% - 6px) 4px,
+    calc(100% - 6px) 2px,
+    calc(100% - 10px) 2px,
+    calc(100% - 10px) 0px,
+    10px 0px,
+    10px 2px,
+    6px 2px,
+    6px 4px,
+    4px 4px,
+    4px 6px,
+    2px 6px,
+    2px 10px,
+    0px 10px
+  );
   color: #241f26;
   background: #faf7f2;
   font-family:
@@ -40,6 +117,59 @@ button {
 button:focus-visible {
   outline: 2px solid #2f8f55;
   outline-offset: 3px;
+}
+
+.pixel-text {
+  display: inline-block;
+  line-height: 1.5;
+  transform: translateY(var(--pixel-font-y-offset));
+}
+
+.ui-bar,
+.game-dialog,
+.dialog-button,
+.icon-button {
+  background: var(--pixel-border-color);
+  border: 0;
+  border-radius: 0;
+  filter: drop-shadow(4px 4px 0 var(--pixel-shadow-color));
+  isolation: isolate;
+  position: relative;
+}
+
+.ui-bar,
+.game-dialog,
+.dialog-button,
+.icon-button {
+  --pixel-border-size: 4px;
+  clip-path: var(--pixel-frame-path, var(--pixel-corner-path));
+}
+
+.ui-bar::before,
+.game-dialog::before,
+.dialog-button::before,
+.icon-button::before {
+  background: var(--pixel-fill-color);
+  content: "";
+  inset: var(--pixel-border-size);
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.ui-bar::before,
+.game-dialog::before,
+.dialog-button::before,
+.icon-button::before {
+  clip-path: var(--pixel-frame-path, var(--pixel-corner-path));
+}
+
+.ui-bar > *,
+.game-dialog > *,
+.dialog-button > *,
+.icon-button > * {
+  position: relative;
+  z-index: 1;
 }
 
 .typing-stage {
@@ -87,10 +217,9 @@ button:focus-visible {
 
 .ui-bar {
   align-items: center;
-  background: rgba(255, 252, 247, 0.76);
-  border: 1px solid rgba(36, 31, 38, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 14px 36px rgba(36, 31, 38, 0.08);
+  --pixel-border-color: rgba(36, 31, 38, 0.18);
+  --pixel-fill-color: rgba(255, 252, 247, 0.82);
+  --pixel-shadow-color: rgba(36, 31, 38, 0.1);
   display: flex;
   gap: 12px;
   padding: 8px;
@@ -99,18 +228,29 @@ button:focus-visible {
 .health-meter {
   align-items: center;
   display: flex;
-  gap: 6px;
-  height: 36px;
+  gap: 16px;
+  height: 48px;
   padding: 0 6px;
 }
 
 .health-meter span {
-  display: block;
-  font-size: var(--pixel-font-large);
+  align-items: center;
+  display: flex;
+  height: 28px;
+  justify-content: center;
   transition:
     filter 180ms ease,
     opacity 180ms ease,
     transform 180ms ease;
+  width: 28px;
+}
+
+.heart-icon {
+  display: block;
+  height: 150%;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  width: 150%;
 }
 
 .health-meter .heart-lost {
@@ -126,7 +266,7 @@ button:focus-visible {
   font-size: var(--pixel-font-large);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
-  height: 36px;
+  height: 48px;
   justify-content: center;
   min-width: 72px;
   padding: 0 6px;
@@ -134,22 +274,23 @@ button:focus-visible {
 
 .icon-button {
   align-items: center;
-  background: #241f26;
-  border-radius: 8px;
+  --pixel-border-color: #17131a;
+  --pixel-fill-color: #241f26;
+  --pixel-shadow-color: rgba(36, 31, 38, 0.24);
   color: #fffaf4;
   cursor: pointer;
   display: inline-flex;
-  height: 36px;
+  height: 48px;
   justify-content: center;
   padding: 0;
   transition:
     background-color 160ms ease,
     transform 160ms ease;
-  width: 36px;
+  width: 48px;
 }
 
 .icon-button:hover:not(:disabled) {
-  background: #3a323d;
+  --pixel-fill-color: #3a323d;
 }
 
 .icon-button:active:not(:disabled) {
@@ -161,12 +302,26 @@ button:focus-visible {
   opacity: 0.34;
 }
 
+.pixel-button-icon {
+  display: block;
+  filter: invert(1);
+  height: 28px;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  width: 28px;
+}
+
+.button-text {
+  font-size: var(--pixel-font-large);
+}
+
 .pause-button-active {
-  background: #2f8f55;
+  --pixel-border-color: #1d5d38;
+  --pixel-fill-color: #2f8f55;
 }
 
 .pause-button-active:hover:not(:disabled) {
-  background: #277947;
+  --pixel-fill-color: #277947;
 }
 
 .game-overlay {
@@ -182,10 +337,9 @@ button:focus-visible {
 
 .game-dialog {
   align-items: center;
-  background: rgba(255, 252, 247);
-  border: 1px solid rgba(36, 31, 38, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 24px 60px rgba(36, 31, 38, 0.12);
+  --pixel-border-color: rgba(36, 31, 38, 0.18);
+  --pixel-fill-color: #fffcf7;
+  --pixel-shadow-color: rgba(36, 31, 38, 0.14);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -206,6 +360,7 @@ button:focus-visible {
   font-size: var(--pixel-font-small);
   font-weight: 400;
   letter-spacing: 0;
+  line-height: 1.5;
   margin: 0;
   text-transform: uppercase;
 }
@@ -213,6 +368,7 @@ button:focus-visible {
 .dialog-title {
   color: #241f26;
   font-size: var(--pixel-font-large);
+  line-height: 1.5;
   margin: 0;
   text-align: center;
 }
@@ -232,6 +388,7 @@ button:focus-visible {
   color: #3f3943;
   font-size: var(--pixel-font-small);
   font-weight: 400;
+  line-height: 2;
   margin: 0;
   text-align: left;
 }
@@ -239,15 +396,18 @@ button:focus-visible {
 .dialog-button {
   align-self: center;
   align-items: center;
-  background: #2f8f55;
-  border-radius: 8px;
+  --pixel-border-size: 2px;
+  --pixel-border-color: #1d5d38;
+  --pixel-frame-path: var(--pixel-button-corner-path);
+  --pixel-fill-color: #2f8f55;
+  --pixel-shadow-color: rgba(29, 93, 56, 0.28);
   color: #fffaf4;
   cursor: pointer;
   display: inline-flex;
   font-size: var(--pixel-font-small);
   font-weight: 400;
   gap: 8px;
-  height: 42px;
+  height: 48px;
   justify-content: center;
   min-width: 7.5rem;
   padding: 0 18px;
@@ -257,7 +417,7 @@ button:focus-visible {
 }
 
 .dialog-button:hover {
-  background: #277947;
+  --pixel-fill-color: #277947;
 }
 
 .dialog-button:active {
@@ -294,8 +454,9 @@ button:focus-visible {
   font-size: var(--pixel-font-xlarge);
   font-weight: 400;
   left: 50%;
+  line-height: 1.5;
   max-width: min(76vw, 36rem);
-  overflow: hidden;
+  overflow: visible;
   position: absolute;
   text-align: center;
   top: 50%;

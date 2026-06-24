@@ -40,6 +40,40 @@ button:focus-visible {
   position: relative;
 }
 
+.top-hud {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  left: 50%;
+  position: absolute;
+  top: 24px;
+  transform: translateX(-50%);
+  width: min(100% - 40px, 720px);
+  z-index: 2;
+}
+
+.key-title {
+  align-items: center;
+  display: flex;
+  gap: clamp(2px, 0.8vw, 8px);
+  justify-content: center;
+  width: 100%;
+}
+
+.key-title-sprite {
+  display: block;
+  height: clamp(36px, 8vw, 64px);
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  width: clamp(36px, 8vw, 64px);
+}
+
+.key-title-space {
+  display: block;
+  flex: 0 0 clamp(12px, 2.5vw, 28px);
+}
+
 .ui-bar {
   align-items: center;
   background: rgba(255, 252, 247, 0.76);
@@ -48,11 +82,7 @@ button:focus-visible {
   box-shadow: 0 14px 36px rgba(36, 31, 38, 0.08);
   display: flex;
   gap: 12px;
-  left: 50%;
   padding: 8px;
-  position: absolute;
-  top: 32px;
-  transform: translateX(-50%);
 }
 
 .health-meter {
@@ -67,6 +97,30 @@ button:focus-visible {
   display: block;
   font-size: 1.15rem;
   line-height: 1;
+  transition:
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.health-meter .heart-lost {
+  filter: grayscale(1);
+  opacity: 0.22;
+  transform: scale(0.9);
+}
+
+.timer-count {
+  align-items: center;
+  color: #241f26;
+  display: flex;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 3.2rem;
+  padding: 0 6px;
 }
 
 .restart-button {
@@ -90,6 +144,104 @@ button:focus-visible {
 }
 
 .restart-button:active {
+  transform: translateY(1px);
+}
+
+.game-overlay {
+  align-items: center;
+  background: rgba(250, 247, 242, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: absolute;
+  z-index: 8;
+}
+
+.game-dialog {
+  align-items: center;
+  background: rgba(255, 252, 247);
+  border: 1px solid rgba(36, 31, 38, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(36, 31, 38, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: min(100%, 18rem);
+  max-width: min(100%, 24rem);
+  padding: 28px;
+}
+
+.welcome-dialog {
+  align-items: stretch;
+  gap: 16px;
+  max-width: min(100%, 32rem);
+  padding: 32px;
+}
+
+.dialog-kicker {
+  color: #6c6670;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.dialog-title {
+  color: #241f26;
+  font-size: 2rem;
+  line-height: 1;
+  margin: 0;
+  text-align: center;
+}
+
+.welcome-title {
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 0.96;
+}
+
+.welcome-copy {
+  border-top: 1px solid rgba(36, 31, 38, 0.1);
+  display: grid;
+  gap: 12px;
+  padding-top: 18px;
+}
+
+.welcome-copy p {
+  color: #3f3943;
+  font-size: 1rem;
+  font-weight: 550;
+  line-height: 1.55;
+  margin: 0;
+  text-align: left;
+}
+
+.dialog-button {
+  align-self: center;
+  align-items: center;
+  background: #2f8f55;
+  border-radius: 8px;
+  color: #fffaf4;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 750;
+  gap: 8px;
+  height: 42px;
+  justify-content: center;
+  min-width: 7.5rem;
+  padding: 0 18px;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.dialog-button:hover {
+  background: #277947;
+}
+
+.dialog-button:active {
   transform: translateY(1px);
 }
 
@@ -259,8 +411,38 @@ button:focus-visible {
     padding: 20px;
   }
 
-  .ui-bar {
+  .top-hud {
     top: 20px;
+    width: min(100% - 24px, 390px);
+  }
+
+  .ui-bar {
+    gap: 10px;
+  }
+
+  .timer-count {
+    min-width: 3rem;
+  }
+
+  .game-dialog {
+    min-width: min(100%, 16rem);
+    padding: 24px;
+  }
+
+  .welcome-dialog {
+    max-width: min(100%, 21rem);
+  }
+
+  .dialog-title {
+    font-size: 2.5rem;
+  }
+
+  .welcome-title {
+    font-size: 2.35rem;
+  }
+
+  .welcome-copy p {
+    font-size: 0.95rem;
   }
 
   .word-line {

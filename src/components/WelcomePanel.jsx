@@ -7,7 +7,7 @@ function WelcomePanel({ onStart }) {
       className="game-dialog welcome-dialog welcome-panel"
     >
       <h1 className="dialog-title welcome-title" id="welcome-title">
-        Welcome to KDot Types
+        Welcome to K.Dot Types
       </h1>
       <div className="welcome-copy">
         <p>
@@ -15,6 +15,7 @@ function WelcomePanel({ onStart }) {
           <br />- You have 5 seconds to type each word.
           <br />- You lose 1 heart for each word you miss.
           <br />- Lose 3 and you're done mate.
+          <br />- Punctuation and caps are required.
         </p>
         <p>
           There are no backspaces as typing the wrong letter doesnt do anything (like me before midday.) Good luck!

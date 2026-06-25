@@ -8,6 +8,8 @@ import keyOPressedSrc from './Key-O-Depressed.png';
 import keyOSrc from './Key-O.png';
 import keyPPressedSrc from './Key-P-Depressed.png';
 import keyPSrc from './Key-P.png';
+import keyPeriodPressedSrc from './Key-Period-Depressed.png';
+import keyPeriodSrc from './Key-Period.png';
 import keySPressedSrc from './Key-S-Depressed.png';
 import keySSrc from './Key-S.png';
 import keyTPressedSrc from './Key-T-Depressed.png';
@@ -16,6 +18,10 @@ import keyYPressedSrc from './Key-Y-Depressed.png';
 import keyYSrc from './Key-Y.png';
 
 export const KEY_SPRITES = {
+  ".": {
+    normal: keyPeriodSrc,
+    pressed: keyPeriodPressedSrc,
+  },
   D: {
     normal: keyDSrc,
     pressed: keyDPressedSrc,

@@ -1,8 +1,11 @@
-export function formatCountdown(tenthsRemaining) {
-  const wholeSeconds = Math.floor(tenthsRemaining / 10);
-  const decimal = tenthsRemaining % 10;
+export function formatCountdown(centisecondsRemaining) {
+  const wholeSeconds = Math.floor(centisecondsRemaining / 100);
+  const centiseconds = centisecondsRemaining % 100;
 
-  return `${String(wholeSeconds)}:${decimal}`;
+  return `${String(wholeSeconds).padStart(2, "0")}:${String(centiseconds).padStart(
+    2,
+    "0",
+  )}`;
 }
 
 export function isInteractiveTarget(target) {

@@ -1,21 +1,12 @@
+import { WORD_SOURCE } from "./wordSource.js";
+
 export const MAX_HEALTH = 3;
 export const WORD_TIME_MS = 5000;
 export const WORD_TIME_SECONDS = Math.ceil(WORD_TIME_MS / 1000);
 export const WORD_TIME_TENTHS = WORD_TIME_SECONDS * 10;
 export const START_COUNTDOWN_MS = 3000;
 
-export const WORDS = [
-  "dear",
-  "kerrianne.",
-  "cake",
-  "music",
-  "dance",
-  "flowers",
-  "present",
-  "sparkle",
-  "surprise",
-  "higgledypiggledy",
-];
+export const WORDS = createWordsFromSource(WORD_SOURCE);
 
 export const INITIAL_GAME_STATE = {
   status: "idle",
@@ -56,6 +47,14 @@ export function gameReducer(state, action) {
     default:
       return state;
   }
+}
+
+function createWordsFromSource(source) {
+  if (Array.isArray(source)) {
+    return source.map((word) => String(word).trim()).filter(Boolean);
+  }
+
+  return String(source).trim().split(/\s+/).filter(Boolean);
 }
 
 function getTimeoutGameState(state) {

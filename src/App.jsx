@@ -60,7 +60,7 @@ function App() {
 
       dispatch({
         type: "typed_key",
-        key: event.key.toLowerCase(),
+        key: event.key,
       });
     }
 
@@ -198,28 +198,30 @@ function App() {
         isTitleIdleAnimationEnabled={isTitleIdleAnimationEnabled}
         onRestart={handleRestart}
         onToggleTimerPause={handleToggleTimerPause}
-        tenthsRemaining={Math.ceil(remainingMs / 100)}
+        centisecondsRemaining={Math.ceil(remainingMs / 10)}
         titlePatternRequest={titlePatternRequest}
       />
 
-      {gameState.status === "idle" ? (
-        <WelcomePanel onStart={handleStart} />
-      ) : gameState.status === "countdown" ? (
-        <CountdownWord value={countdownValue} />
-      ) : (
-        <div className="word-line" aria-label="Typing words">
-          {positionedWords.map(({ distance, index, offset, word }) => (
-            <Word
-              charIndex={gameState.charIndex}
-              distance={distance}
-              isActive={index === gameState.wordIndex}
-              key={`${index}-${word}`}
-              offset={offset}
-              word={word}
-            />
-          ))}
-        </div>
-      )}
+      <div className="game-content">
+        {gameState.status === "idle" ? (
+          <WelcomePanel onStart={handleStart} />
+        ) : gameState.status === "countdown" ? (
+          <CountdownWord value={countdownValue} />
+        ) : (
+          <div className="word-line" aria-label="Typing words">
+            {positionedWords.map(({ distance, index, offset, word }) => (
+              <Word
+                charIndex={gameState.charIndex}
+                distance={distance}
+                isActive={index === gameState.wordIndex}
+                key={`${index}-${word}`}
+                offset={offset}
+                word={word}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <GameStatusOverlay onStart={handleStart} status={gameState.status} />
     </main>

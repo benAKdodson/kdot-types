@@ -2,6 +2,7 @@ import heartFullSrc from '../Assets/Heart-full-border.png';
 import pauseButtonSrc from '../Assets/Pause-Button.png';
 import playButtonSrc from '../Assets/Play-Button.png';
 import restartButtonSrc from '../Assets/Restart-Button.png';
+import timerSrc from '../Assets/Timer.png';
 import { MAX_HEALTH } from '../game.js';
 import { formatCountdown } from '../helpers.js';
 import KeyTitle from './KeyTitle.jsx';
@@ -13,10 +14,10 @@ function TopHud({
   isTitleIdleAnimationEnabled,
   onRestart,
   onToggleTimerPause,
-  tenthsRemaining,
+  centisecondsRemaining,
   titlePatternRequest,
 }) {
-  const countdownLabel = formatCountdown(tenthsRemaining);
+  const countdownLabel = formatCountdown(centisecondsRemaining);
 
   return (
     <div className="top-hud">
@@ -45,39 +46,43 @@ function TopHud({
           aria-label={`${countdownLabel} seconds remaining`}
           className="timer-count"
         >
+          <span aria-hidden="true" className="timer-screen" />
+          <img alt="" aria-hidden="true" className="timer-frame" src={timerSrc} />
           <span className="pixel-text timer-count-text">{countdownLabel}</span>
         </div>
 
-        <button
-          aria-label={isTimerPaused ? "Resume timer" : "Pause timer"}
-          className={`icon-button pause-button ${
-            isTimerPaused ? "pause-button-active" : ""
-          }`}
-          disabled={!isTimerPausable}
-          onClick={onToggleTimerPause}
-          type="button"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="pixel-button-icon"
-            src={isTimerPaused ? playButtonSrc : pauseButtonSrc}
-          />
-        </button>
+        <div className="hud-actions">
+          <button
+            aria-label={isTimerPaused ? "Resume timer" : "Pause timer"}
+            className={`icon-button pause-button ${
+              isTimerPaused ? "pause-button-active" : ""
+            }`}
+            disabled={!isTimerPausable}
+            onClick={onToggleTimerPause}
+            type="button"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="pixel-button-icon"
+              src={isTimerPaused ? playButtonSrc : pauseButtonSrc}
+            />
+          </button>
 
-        <button
-          aria-label="Restart test"
-          className="icon-button restart-button"
-          onClick={onRestart}
-          type="button"
-        >
-          <img
-            alt=""
-            aria-hidden="true"
-            className="pixel-button-icon"
-            src={restartButtonSrc}
-          />
-        </button>
+          <button
+            aria-label="Restart test"
+            className="icon-button restart-button"
+            onClick={onRestart}
+            type="button"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              className="pixel-button-icon"
+              src={restartButtonSrc}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

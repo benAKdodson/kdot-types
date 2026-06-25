@@ -74,7 +74,7 @@ function KeyTitle({ isIdleAnimationEnabled, patternRequest }) {
   }, [isIdleAnimationEnabled, patternRequest]);
 
   return (
-    <div aria-label="KDOT TYPES" className="key-title" role="img">
+    <div aria-label="K.DOT TYPES" className="key-title" role="img">
       {TITLE_KEYS.map((key, index) => {
         if (key === " ") {
           return (

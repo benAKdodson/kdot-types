@@ -7,12 +7,15 @@ export const WORD_TIME_TENTHS = WORD_TIME_SECONDS * 10;
 export const START_COUNTDOWN_MS = 3000;
 
 export const WORDS = createWordsFromSource(WORD_SOURCE);
+export const TYPEWRITER_LINE_WORD_COUNTS =
+  createTypewriterLineWordCounts(WORD_SOURCE);
 
 export const INITIAL_GAME_STATE = {
   status: "idle",
   wordIndex: 0,
   charIndex: 0,
   health: MAX_HEALTH,
+  typedWords: [],
 };
 
 export function gameReducer(state, action) {
@@ -55,6 +58,17 @@ function createWordsFromSource(source) {
   }
 
   return String(source).trim().split(/\s+/).filter(Boolean);
+}
+
+function createTypewriterLineWordCounts(source) {
+  if (Array.isArray(source)) {
+    return [createWordsFromSource(source).length];
+  }
+
+  return String(source)
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/).filter(Boolean).length);
 }
 
 function getTimeoutGameState(state) {
@@ -122,6 +136,7 @@ function getNextGameState(state, typedKey) {
       ...state,
       status: "complete",
       charIndex: currentWord.length,
+      typedWords: [...state.typedWords, currentWord],
     };
   }
 
@@ -129,5 +144,6 @@ function getNextGameState(state, typedKey) {
     ...state,
     wordIndex: state.wordIndex + 1,
     charIndex: 0,
+    typedWords: [...state.typedWords, currentWord],
   };
 }

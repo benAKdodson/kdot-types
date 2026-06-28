@@ -82,13 +82,17 @@ function KeyTitle({ isIdleAnimationEnabled, patternRequest }) {
           );
         }
 
+        const isPressed = pressedKeyIndexes.includes(index);
+
         return (
           <img
             alt=""
             aria-hidden="true"
-            className="key-title-sprite"
+            className={`key-title-sprite${
+              isPressed ? " key-title-sprite-pressed" : ""
+            }`}
             key={`${key}-${index}`}
-            src={getTitleKeySprite(key, pressedKeyIndexes.includes(index))}
+            src={getTitleKeySprite(key, isPressed)}
           />
         );
       })}

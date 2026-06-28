@@ -13,6 +13,11 @@
   --pixel-font-y-offset: 0.35em;
   --stage-stack-gap: 18px;
   --word-line-y-offset: clamp(-124px, -12vh, -64px);
+  --typewriter-paper-align-x: 0px;
+  --typewriter-paper-align-y: -48px;
+  --typewriter-reveal-top: calc(clamp(15rem, 39vh, 18rem) + 40px);
+  --typewriter-viewport-height: 11rem;
+  --game-panel-width: 32rem;
   --game-background: #a8d8a8;
   --game-ink: #1d2f22;
   --game-ink-soft: #486543;
@@ -193,10 +198,6 @@ button:focus-visible {
 .typing-stage {
   align-items: center;
   background-color: var(--game-background);
-  background-image:
-    linear-gradient(rgba(38, 81, 45, 0.08) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(38, 81, 45, 0.08) 2px, transparent 2px);
-  background-size: 48px 48px;
   display: flex;
   flex-direction: column;
   gap: var(--stage-stack-gap);
@@ -227,11 +228,45 @@ button:focus-visible {
 }
 
 .key-title-sprite {
+  --key-title-shadow-bottom-color: rgba(28, 61, 34, 0.28);
+  --key-title-shadow-bottom-y: 8px;
+  --key-title-shadow-left-x: -3px;
+  --key-title-shadow-right-x: 3px;
+  --key-title-shadow-side-color: rgba(28, 61, 34, 0.18);
+  --key-title-shadow-side-y: 3px;
+  --key-title-translate-y: 0px;
   display: block;
+  filter:
+    drop-shadow(
+      var(--key-title-shadow-left-x) var(--key-title-shadow-side-y) 0
+        var(--key-title-shadow-side-color)
+    )
+    drop-shadow(
+      var(--key-title-shadow-right-x) var(--key-title-shadow-side-y) 0
+        var(--key-title-shadow-side-color)
+    )
+    drop-shadow(
+      0 var(--key-title-shadow-bottom-y) 0
+        var(--key-title-shadow-bottom-color)
+    );
   height: clamp(54px, 12vw, 96px);
   image-rendering: crisp-edges;
   image-rendering: pixelated;
+  transform: translateY(var(--key-title-translate-y));
+  transition:
+    filter 90ms steps(2, end),
+    transform 90ms steps(2, end);
   width: clamp(54px, 12vw, 96px);
+}
+
+.key-title-sprite-pressed {
+  --key-title-shadow-bottom-color: rgba(28, 61, 34, 0.22);
+  --key-title-shadow-bottom-y: 3px;
+  --key-title-shadow-left-x: -2px;
+  --key-title-shadow-right-x: 2px;
+  --key-title-shadow-side-color: rgba(28, 61, 34, 0.14);
+  --key-title-shadow-side-y: 2px;
+  --key-title-translate-y: 4px;
 }
 
 .key-title-space {
@@ -251,7 +286,7 @@ button:focus-visible {
   --hud-actions-gap: 12px;
   --timer-width: 110px;
   --ui-bar-gap: 18px;
-  --ui-bar-width: 560px;
+  --ui-bar-width: var(--game-panel-width);
   column-gap: var(--ui-bar-gap);
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--timer-width) minmax(0, 1fr);
@@ -419,8 +454,9 @@ button:focus-visible {
 .welcome-dialog {
   align-items: stretch;
   gap: 16px;
-  max-width: min(100%, 32rem);
+  max-width: min(100%, var(--game-panel-width));
   padding: 32px;
+  width: min(100%, var(--game-panel-width));
 }
 
 .dialog-kicker {
@@ -498,6 +534,274 @@ button:focus-visible {
   height: clamp(320px, 46vh, 420px);
   justify-content: center;
   width: 100%;
+}
+
+.active-game-layout {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+  justify-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.word-zone {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+.word-zone .word-line {
+  transform: translateY(var(--word-line-y-offset));
+}
+
+.typewriter-viewport {
+  align-items: flex-start;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-start;
+  height: var(--typewriter-viewport-height);
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+  position: fixed;
+  width: 100vw;
+  z-index: 3;
+}
+
+.typewriter-viewport-revealed {
+  z-index: 5;
+}
+
+.typed-page {
+  align-items: stretch;
+  background-color: white;
+  border: 4px solid transparent;
+  box-shadow: none;
+  color: #3d3322;
+  display: flex;
+  font-size: var(--pixel-font-small);
+  height: var(--typewriter-paper-height);
+  overflow: hidden;
+  padding: 24px 28px 8px;
+  position: relative;
+  width: calc(var(--typewriter-line-width) - 10px);
+  z-index: 1;
+}
+
+.typed-page::before {
+  background: rgba(255, 255, 255, 0.42);
+  content: "";
+  height: 4px;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 4px;
+}
+
+.typewriter-paper {
+  flex: 0 0 auto;
+  max-width: none;
+  transform: translate(
+    calc(var(--paper-offset-x, 0px) + var(--typewriter-paper-align-x)),
+    calc(var(--paper-offset-y, 0px) + var(--typewriter-paper-align-y))
+  );
+  transition:
+    height 80ms steps(2, end),
+    transform 80ms steps(2, end);
+  will-change: height, transform;
+}
+
+.typewriter-paper-returning {
+  transition: transform 180ms steps(8, end);
+}
+
+.typewriter-paper-line-feeding {
+  transition:
+    height 120ms steps(4, end),
+    transform 120ms steps(4, end);
+}
+
+.typewriter-paper-countdown-loaded,
+.typewriter-paper-countdown-shrinking-first,
+.typewriter-paper-countdown-shrinking-final {
+  transform: translate(
+    calc(50vw - 50% + var(--typewriter-paper-align-x)),
+    calc(
+      var(--paper-offset-y, 0px) + var(--typewriter-paper-align-y) +
+        var(--typewriter-countdown-paper-offset-y, 0px)
+    )
+  );
+}
+
+.typewriter-paper-countdown-loaded {
+  transition: none;
+}
+
+.typewriter-paper-countdown-shrinking-first,
+.typewriter-paper-countdown-shrinking-final {
+  transition:
+    height 360ms steps(8, end),
+    transform 360ms steps(8, end);
+}
+
+.typewriter-paper-countdown-primed {
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-paper-reveal-centering {
+  transform: translate(
+    calc(50vw - 50%),
+    calc(var(--paper-offset-y, 0px) + var(--typewriter-paper-align-y))
+  );
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-paper-reveal-pulling,
+.typewriter-paper-reveal-lifting {
+  box-shadow:
+    -2px 0 0 rgba(112, 96, 64, 0.08),
+    2px 0 0 rgba(112, 96, 64, 0.08),
+    0 4px 0 rgba(112, 96, 64, 0.12),
+    -2px 4px 0 rgba(112, 96, 64, 0.12),
+    2px 4px 0 rgba(112, 96, 64, 0.12);
+}
+
+.typewriter-paper-reveal-pulling .typed-page-reveal-note,
+.typewriter-paper-reveal-lifting .typed-page-reveal-note {
+  opacity: 1;
+}
+
+.typewriter-paper-reveal-pulling {
+  transform: translate(
+    calc(50vw - 50%),
+    calc(
+      var(--paper-offset-y, 0px) + var(--typewriter-paper-align-y) +
+        var(--typewriter-reveal-pull-offset-y, 0px)
+    )
+  );
+  transition:
+    height 360ms steps(8, end),
+    transform 360ms steps(8, end);
+}
+
+.typewriter-paper-reveal-lifting {
+  transform: translate(
+    calc(50vw - 50%),
+    calc(
+      var(--typewriter-reveal-top) - 100vh +
+        var(--typewriter-viewport-height)
+    )
+  );
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typed-page-text {
+  display: block;
+  font-size: inherit;
+  line-height: 2;
+  margin: 0;
+  min-height: 0;
+  text-align: left;
+  white-space: pre;
+  width: 100%;
+}
+
+.typed-page-line {
+  display: block;
+  min-height: 2em;
+}
+
+.typed-page-reveal-note {
+  display: block;
+  font-size: inherit;
+  left: 28px;
+  line-height: 2;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+  text-align: left;
+  top: calc(var(--typewriter-paper-height) - 84px);
+  white-space: pre;
+}
+
+.typed-page-reveal-note span {
+  display: block;
+}
+
+.typewriter-caret-marker {
+  display: inline-block;
+  height: 1em;
+  vertical-align: baseline;
+  width: 0;
+}
+
+.typewriter-sprite {
+  bottom: 0;
+  display: block;
+  image-rendering: pixelated;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  width: clamp(360px, 46vw, 600px);
+  z-index: 4;
+}
+
+.typewriter-sprite-base {
+  z-index: 4;
+}
+
+.typewriter-rod {
+  transform: translateX(
+    calc(-50% + var(--typewriter-rod-offset-x, 0px))
+  );
+  transition: transform 80ms steps(2, end);
+  will-change: transform;
+  z-index: 3;
+}
+
+.typewriter-rod-returning {
+  transition: transform 180ms steps(8, end);
+}
+
+.typewriter-rod-line-feeding {
+  transition: transform 120ms steps(4, end);
+}
+
+.typewriter-rod-countdown-centered {
+  transform: translateX(-50%);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-rod-countdown-primed {
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-rod-reveal-centering {
+  transform: translateX(-50%);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-rod-reveal-pulling {
+  transform: translateX(-50%);
+  transition: transform 360ms steps(8, end);
+}
+
+.typewriter-rod-reveal-lifting {
+  transform: translateX(-50%);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typewriter-sprite-hidden {
+  opacity: 0;
 }
 
 .word-line {
@@ -708,6 +1012,14 @@ button:focus-visible {
 
   .game-content {
     height: clamp(320px, 52vh, 460px);
+  }
+
+  .typewriter-viewport {
+    --typewriter-viewport-height: 9rem;
+  }
+
+  .typed-page {
+    padding: 20px 22px 12px;
   }
 
   .word-line {

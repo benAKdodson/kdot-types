@@ -3,29 +3,40 @@ import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import CountdownWord from "./components/CountdownWord.jsx";
 import GameStatusOverlay from "./components/GameStatusOverlay.jsx";
 import TopHud from "./components/TopHud.jsx";
+import TypedPage from "./components/TypedPage.jsx";
 import WelcomePanel from "./components/WelcomePanel.jsx";
 import Word from "./components/Word.jsx";
 import {
   gameReducer,
   INITIAL_GAME_STATE,
   START_COUNTDOWN_MS,
+  TYPEWRITER_LINE_WORD_COUNTS,
   WORD_TIME_MS,
   WORDS,
 } from "./game.js";
 import { isInteractiveTarget } from "./helpers.js";
 
+const TYPEWRITER_ACTIVE_MS = 90;
+
 function App() {
   const [gameState, dispatch] = useReducer(gameReducer, INITIAL_GAME_STATE);
+  const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [countdownRemainingMs, setCountdownRemainingMs] =
     useState(START_COUNTDOWN_MS);
   const [remainingMs, setRemainingMs] = useState(WORD_TIME_MS);
   const remainingMsRef = useRef(WORD_TIME_MS);
+  const typewriterActiveTimeoutRef = useRef(null);
   const titlePatternRequestIdRef = useRef(0);
   const [titlePatternRequest, setTitlePatternRequest] = useState(null);
   const isTitleIdleAnimationEnabled =
     gameState.status === "idle" || isTimerPaused;
+  const isLetterRevealed = gameState.status === "complete";
   const countdownValue = Math.max(1, Math.ceil(countdownRemainingMs / 1000));
+  const currentWordFragment =
+    gameState.status === "playing" || gameState.status === "failed"
+      ? (WORDS[gameState.wordIndex] ?? "").slice(0, gameState.charIndex)
+      : "";
 
   const positionedWords = useMemo(
     () =>
@@ -58,6 +69,16 @@ function App() {
 
       event.preventDefault();
 
+      if (typewriterActiveTimeoutRef.current !== null) {
+        window.clearTimeout(typewriterActiveTimeoutRef.current);
+      }
+
+      setIsTypewriterActive(true);
+      typewriterActiveTimeoutRef.current = window.setTimeout(() => {
+        setIsTypewriterActive(false);
+        typewriterActiveTimeoutRef.current = null;
+      }, TYPEWRITER_ACTIVE_MS);
+
       dispatch({
         type: "typed_key",
         key: event.key,
@@ -68,6 +89,10 @@ function App() {
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+
+      if (typewriterActiveTimeoutRef.current !== null) {
+        window.clearTimeout(typewriterActiveTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -206,19 +231,43 @@ function App() {
         {gameState.status === "idle" ? (
           <WelcomePanel onStart={handleStart} />
         ) : gameState.status === "countdown" ? (
-          <CountdownWord value={countdownValue} />
+          <div className="active-game-layout">
+            <div className="word-zone">
+              <CountdownWord value={countdownValue} />
+            </div>
+            <TypedPage
+              completedWords={gameState.typedWords}
+              countdownValue={countdownValue}
+              currentWordFragment={currentWordFragment}
+              isTypewriterActive={isTypewriterActive}
+              lineWordCounts={TYPEWRITER_LINE_WORD_COUNTS}
+            />
+          </div>
         ) : (
-          <div className="word-line" aria-label="Typing words">
-            {positionedWords.map(({ distance, index, offset, word }) => (
-              <Word
-                charIndex={gameState.charIndex}
-                distance={distance}
-                isActive={index === gameState.wordIndex}
-                key={`${index}-${word}`}
-                offset={offset}
-                word={word}
-              />
-            ))}
+          <div className="active-game-layout">
+            {!isLetterRevealed ? (
+              <div className="word-zone">
+                <div className="word-line" aria-label="Typing words">
+                  {positionedWords.map(({ distance, index, offset, word }) => (
+                    <Word
+                      charIndex={gameState.charIndex}
+                      distance={distance}
+                      isActive={index === gameState.wordIndex}
+                      key={`${index}-${word}`}
+                      offset={offset}
+                      word={word}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <TypedPage
+              completedWords={gameState.typedWords}
+              currentWordFragment={currentWordFragment}
+              isTypewriterActive={isTypewriterActive}
+              isRevealed={isLetterRevealed}
+              lineWordCounts={TYPEWRITER_LINE_WORD_COUNTS}
+            />
           </div>
         )}
       </div>

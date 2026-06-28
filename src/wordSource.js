@@ -14,10 +14,14 @@ export const WORD_SOURCE = [
 ];
 */
 export const WORD_SOURCE = `
-  Dear Kerrianne.
+  Dear Kerrianne
+
+  Meeting you was the best thing thats happened to me.
   
-  Incredible girl.
+  Sunshine in winter.
   Beatiful, generous, fierce.
   Somehow, she's all mine.
+
+
 
   `

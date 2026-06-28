@@ -7,32 +7,48 @@ import TypedPage from "./components/TypedPage.jsx";
 import WelcomePanel from "./components/WelcomePanel.jsx";
 import Word from "./components/Word.jsx";
 import {
+  advanceCheatCodeInput,
+  CHEAT_CODE_INPUT_TIMEOUT_MS,
+} from "./cheatCodes.js";
+import {
   gameReducer,
   INITIAL_GAME_STATE,
+  MAX_HEALTH,
   START_COUNTDOWN_MS,
   TYPEWRITER_LINE_WORD_COUNTS,
   WORD_TIME_MS,
   WORDS,
 } from "./game.js";
 import { isInteractiveTarget } from "./helpers.js";
+import {
+  playRandomKeyPressSound,
+  preloadKeyPressSounds,
+} from "./keyPressSounds.js";
 
 const TYPEWRITER_ACTIVE_MS = 90;
 
 function App() {
+  // State and refs
   const [gameState, dispatch] = useReducer(gameReducer, INITIAL_GAME_STATE);
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const [isWelcomeTransitionActive, setIsWelcomeTransitionActive] =
+    useState(false);
   const [countdownRemainingMs, setCountdownRemainingMs] =
     useState(START_COUNTDOWN_MS);
   const [remainingMs, setRemainingMs] = useState(WORD_TIME_MS);
   const remainingMsRef = useRef(WORD_TIME_MS);
+  const cheatCodeInputRef = useRef({ input: "", lastInputAt: 0 });
   const typewriterActiveTimeoutRef = useRef(null);
   const titlePatternRequestIdRef = useRef(0);
   const [titlePatternRequest, setTitlePatternRequest] = useState(null);
+
+  // Derived values
   const isTitleIdleAnimationEnabled =
     gameState.status === "idle" || isTimerPaused;
   const isLetterRevealed = gameState.status === "complete";
   const countdownValue = Math.max(1, Math.ceil(countdownRemainingMs / 1000));
+  const countdownElapsedMs = START_COUNTDOWN_MS - countdownRemainingMs;
   const currentWordFragment =
     gameState.status === "playing" || gameState.status === "failed"
       ? (WORDS[gameState.wordIndex] ?? "").slice(0, gameState.charIndex)
@@ -53,7 +69,10 @@ function App() {
     [gameState.wordIndex],
   );
 
+  // Effects
   useEffect(() => {
+    preloadKeyPressSounds();
+
     function handleKeyDown(event) {
       if (isInteractiveTarget(event.target)) {
         return;
@@ -68,6 +87,7 @@ function App() {
       }
 
       event.preventDefault();
+      playRandomKeyPressSound();
 
       if (typewriterActiveTimeoutRef.current !== null) {
         window.clearTimeout(typewriterActiveTimeoutRef.current);
@@ -107,7 +127,12 @@ function App() {
 
   useEffect(() => {
     if (gameState.status !== "countdown") {
-      setCountdownRemainingMs(START_COUNTDOWN_MS);
+      setIsWelcomeTransitionActive(false);
+    }
+  }, [gameState.status]);
+
+  useEffect(() => {
+    if (gameState.status !== "countdown") {
       return undefined;
     }
 
@@ -182,6 +207,7 @@ function App() {
     };
   }, [gameState.status, gameState.wordIndex, isTimerPaused]);
 
+  // Actions and handlers
   function triggerTitlePattern(name) {
     titlePatternRequestIdRef.current += 1;
     setTitlePatternRequest({
@@ -190,8 +216,47 @@ function App() {
     });
   }
 
+  function applyCheatCodeEffect(effect) {
+    switch (effect) {
+      case "add-heart":
+        dispatch({
+          type: "cheat_add_heart",
+        });
+        break;
+
+      case "complete-game":
+        dispatch({
+          type: "cheat_complete",
+        });
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  function handleTitleKeyPress(key) {
+    const inputAt = window.performance.now();
+    const previousInput = cheatCodeInputRef.current;
+    const currentInput =
+      inputAt - previousInput.lastInputAt <= CHEAT_CODE_INPUT_TIMEOUT_MS
+        ? previousInput.input
+        : "";
+    const result = advanceCheatCodeInput(currentInput, key);
+
+    cheatCodeInputRef.current = {
+      input: result.input,
+      lastInputAt: result.effect ? 0 : inputAt,
+    };
+
+    if (result.effect) {
+      applyCheatCodeEffect(result.effect);
+    }
+  }
+
   function handleRestart(event) {
     event.currentTarget.blur();
+    setIsWelcomeTransitionActive(false);
     triggerTitlePattern("right-to-left-fast");
     dispatch({
       type: "restart",
@@ -199,9 +264,13 @@ function App() {
   }
 
   function handleStart(event) {
+    const isStartingFromWelcome = gameState.status === "idle";
+
     event.currentTarget.blur();
+    setCountdownRemainingMs(START_COUNTDOWN_MS);
+    setIsWelcomeTransitionActive(isStartingFromWelcome);
     triggerTitlePattern(
-      gameState.status === "idle" ? "left-to-right-fast" : "right-to-left-fast",
+      isStartingFromWelcome ? "left-to-right-fast" : "right-to-left-fast",
     );
     dispatch({
       type: "start",
@@ -214,6 +283,7 @@ function App() {
     setIsTimerPaused((currentIsTimerPaused) => !currentIsTimerPaused);
   }
 
+  // Render
   return (
     <main className="typing-stage">
       <TopHud
@@ -221,55 +291,58 @@ function App() {
         isTimerPausable={gameState.status === "playing"}
         isTimerPaused={isTimerPaused}
         isTitleIdleAnimationEnabled={isTitleIdleAnimationEnabled}
+        maxHealth={gameState.maxHealth ?? MAX_HEALTH}
         onRestart={handleRestart}
+        onTitleKeyPress={handleTitleKeyPress}
         onToggleTimerPause={handleToggleTimerPause}
         centisecondsRemaining={Math.ceil(remainingMs / 10)}
         titlePatternRequest={titlePatternRequest}
       />
 
       <div className="game-content">
-        {gameState.status === "idle" ? (
-          <WelcomePanel onStart={handleStart} />
-        ) : gameState.status === "countdown" ? (
-          <div className="active-game-layout">
+        <div className="active-game-layout">
+          {gameState.status === "countdown" ? (
             <div className="word-zone">
               <CountdownWord value={countdownValue} />
             </div>
-            <TypedPage
-              completedWords={gameState.typedWords}
-              countdownValue={countdownValue}
-              currentWordFragment={currentWordFragment}
-              isTypewriterActive={isTypewriterActive}
-              lineWordCounts={TYPEWRITER_LINE_WORD_COUNTS}
-            />
-          </div>
-        ) : (
-          <div className="active-game-layout">
-            {!isLetterRevealed ? (
-              <div className="word-zone">
-                <div className="word-line" aria-label="Typing words">
-                  {positionedWords.map(({ distance, index, offset, word }) => (
-                    <Word
-                      charIndex={gameState.charIndex}
-                      distance={distance}
-                      isActive={index === gameState.wordIndex}
-                      key={`${index}-${word}`}
-                      offset={offset}
-                      word={word}
-                    />
-                  ))}
-                </div>
+          ) : gameState.status !== "idle" && !isLetterRevealed ? (
+            <div className="word-zone">
+              <div className="word-line" aria-label="Typing words">
+                {positionedWords.map(({ distance, index, offset, word }) => (
+                  <Word
+                    charIndex={gameState.charIndex}
+                    distance={distance}
+                    isActive={index === gameState.wordIndex}
+                    key={`${index}-${word}`}
+                    offset={offset}
+                    word={word}
+                  />
+                ))}
               </div>
-            ) : null}
-            <TypedPage
-              completedWords={gameState.typedWords}
-              currentWordFragment={currentWordFragment}
-              isTypewriterActive={isTypewriterActive}
-              isRevealed={isLetterRevealed}
-              lineWordCounts={TYPEWRITER_LINE_WORD_COUNTS}
-            />
-          </div>
-        )}
+            </div>
+          ) : null}
+          <TypedPage
+            completedWords={gameState.typedWords}
+            countdownElapsedMs={
+              gameState.status === "countdown" ? countdownElapsedMs : 0
+            }
+            countdownValue={
+              gameState.status === "countdown" ? countdownValue : null
+            }
+            currentWordFragment={currentWordFragment}
+            isTypewriterActive={isTypewriterActive}
+            isRevealed={isLetterRevealed}
+            isWelcome={gameState.status === "idle"}
+            isWelcomeTransitioning={isWelcomeTransitionActive}
+            lineWordCounts={TYPEWRITER_LINE_WORD_COUNTS}
+            welcomeContent={
+              <WelcomePanel
+                isStarting={isWelcomeTransitionActive}
+                onStart={handleStart}
+              />
+            }
+          />
+        </div>
       </div>
 
       <GameStatusOverlay onStart={handleStart} status={gameState.status} />

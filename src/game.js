@@ -1,6 +1,7 @@
 import { WORD_SOURCE } from "./wordSource.js";
 
 export const MAX_HEALTH = 3;
+export const EXTRA_HEART_MAX_HEALTH = MAX_HEALTH + 1;
 export const WORD_TIME_MS = 5000;
 export const WORD_TIME_SECONDS = Math.ceil(WORD_TIME_MS / 1000);
 export const WORD_TIME_TENTHS = WORD_TIME_SECONDS * 10;
@@ -15,16 +16,22 @@ export const INITIAL_GAME_STATE = {
   wordIndex: 0,
   charIndex: 0,
   health: MAX_HEALTH,
+  maxHealth: MAX_HEALTH,
   typedWords: [],
 };
 
 export function gameReducer(state, action) {
   switch (action.type) {
-    case "start":
+    case "start": {
+      const maxHealth = state.maxHealth ?? MAX_HEALTH;
+
       return {
         ...INITIAL_GAME_STATE,
         status: "countdown",
+        health: maxHealth,
+        maxHealth,
       };
+    }
 
     case "countdown_complete":
       if (state.status !== "countdown") {
@@ -38,14 +45,49 @@ export function gameReducer(state, action) {
         charIndex: 0,
       };
 
+    case "cheat_complete": {
+      const finalWordIndex = Math.max(0, WORDS.length - 1);
+      const finalWord = WORDS[finalWordIndex] ?? "";
+
+      return {
+        ...state,
+        status: "complete",
+        wordIndex: finalWordIndex,
+        charIndex: finalWord.length,
+        health: state.maxHealth ?? MAX_HEALTH,
+        typedWords: [...WORDS],
+      };
+    }
+
+    case "cheat_add_heart": {
+      const maxHealth = state.maxHealth ?? MAX_HEALTH;
+
+      if (maxHealth >= EXTRA_HEART_MAX_HEALTH) {
+        return state;
+      }
+
+      return {
+        ...state,
+        health: Math.min(EXTRA_HEART_MAX_HEALTH, state.health + 1),
+        maxHealth: EXTRA_HEART_MAX_HEALTH,
+      };
+    }
+
     case "typed_key":
       return getNextGameState(state, action.key);
 
     case "word_timeout":
       return getTimeoutGameState(state);
 
-    case "restart":
-      return INITIAL_GAME_STATE;
+    case "restart": {
+      const maxHealth = state.maxHealth ?? MAX_HEALTH;
+
+      return {
+        ...INITIAL_GAME_STATE,
+        health: maxHealth,
+        maxHealth,
+      };
+    }
 
     default:
       return state;

@@ -3,7 +3,6 @@ import pauseButtonSrc from '../Assets/Pause-Button.png';
 import playButtonSrc from '../Assets/Play-Button.png';
 import restartButtonSrc from '../Assets/Restart-Button.png';
 import timerSrc from '../Assets/Timer.png';
-import { MAX_HEALTH } from '../game.js';
 import { formatCountdown } from '../helpers.js';
 import KeyTitle from './KeyTitle.jsx';
 
@@ -12,7 +11,9 @@ function TopHud({
   isTimerPausable,
   isTimerPaused,
   isTitleIdleAnimationEnabled,
+  maxHealth,
   onRestart,
+  onTitleKeyPress,
   onToggleTimerPause,
   centisecondsRemaining,
   titlePatternRequest,
@@ -23,15 +24,18 @@ function TopHud({
     <div className="top-hud">
       <KeyTitle
         isIdleAnimationEnabled={isTitleIdleAnimationEnabled}
+        onManualKeyPress={onTitleKeyPress}
         patternRequest={titlePatternRequest}
       />
 
       <div className="ui-bar" aria-label="Typing test controls">
         <div
-          aria-label={`${health} of ${MAX_HEALTH} hearts remaining`}
-          className="health-meter"
+          aria-label={`${health} of ${maxHealth} hearts remaining`}
+          className={`health-meter${
+            maxHealth > 3 ? " health-meter-expanded" : ""
+          }`}
         >
-          {Array.from({ length: MAX_HEALTH }).map((_, index) => (
+          {Array.from({ length: maxHealth }).map((_, index) => (
             <span
               aria-hidden="true"
               className={index < health ? "" : "heart-lost"}

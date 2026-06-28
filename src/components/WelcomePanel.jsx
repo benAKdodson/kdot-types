@@ -1,15 +1,17 @@
 import playButtonSrc from '../Assets/Play-Button.png';
 
-function WelcomePanel({ onStart }) {
+function WelcomePanel({ isStarting = false, onStart }) {
   return (
     <section
       aria-labelledby="welcome-title"
-      className="game-dialog welcome-dialog welcome-panel"
+      className={`welcome-paper-content${
+        isStarting ? " welcome-paper-content-starting" : ""
+      }`}
     >
-      <h1 className="dialog-title welcome-title" id="welcome-title">
+      <h1 className="welcome-paper-title" id="welcome-title">
         Welcome to K.Dot Types
       </h1>
-      <div className="welcome-copy">
+      <div className="welcome-paper-copy">
         <p>
           The rules are simple:
           <br />- You have 5 seconds to type each word.
@@ -24,6 +26,7 @@ function WelcomePanel({ onStart }) {
       <button
         autoFocus
         className="dialog-button"
+        disabled={isStarting}
         onClick={onStart}
         type="button"
       >

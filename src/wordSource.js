@@ -19,9 +19,6 @@ export const WORD_SOURCE = `
   Meeting you was the best thing thats happened to me.
   
   Sunshine in winter.
-  Beatiful, generous, fierce.
-  Somehow, she's all mine.
-
-
-
+  Beautiful, defiant, kind.
+  Rejoice! She's all mine.
   `

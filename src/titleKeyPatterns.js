@@ -21,7 +21,7 @@ export const TITLE_KEY_TIMINGS = {
   actionAllTapPressMs: 150,
   actionAllTapRestMs: 120,
   actionFastGapMs: 0,
-  actionFastPressMs: 42,
+  actionFastPressMs: 80,
   idleDelayMaxMs: 2600,
   idleDelayMinMs: 1100,
   idleGapMs: 5,

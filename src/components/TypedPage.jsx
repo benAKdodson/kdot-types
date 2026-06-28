@@ -6,16 +6,22 @@ import {
   useState,
 } from 'react';
 
+import dingSound from '../Assets/Sounds/ding.mp3';
 import paperLoad1Sound from '../Assets/Sounds/paper-load-1.mp3';
 import paperLoad2Sound from '../Assets/Sounds/paper-load-2.mp3';
+import paperUnloadSound from '../Assets/Sounds/paper-unload.mp3';
 import rodSlideSound from '../Assets/Sounds/rod-slide.mp3';
-//import typewriterActiveSprite from '../Assets/typewriter-1.0-active.png';
 import typewriterActiveSprite from '../Assets/Typewriter-2-active.png';
 import typewriterRodSprite from '../Assets/Typewriter-2-rod.png';
-//import typewriterSprite from '../Assets/typewriter-1.0.png';
 import typewriterSprite from '../Assets/Typewriter-2.png';
+import { createPreloadedAudio, restartAudio } from '../audio.js';
+import {
+  getTypewriterLines,
+  TYPEWRITER_LINE_LENGTH,
+} from '../typewriterText.js';
 
-const TYPEWRITER_LINE_LENGTH = 48;
+// Constants
+const TYPEWRITER_DING_MARGIN_CHARACTERS = 5;
 const TYPEWRITER_RETURN_MS = 180;
 const TYPEWRITER_LINE_FEED_MS = 120;
 const TYPEWRITER_REVEAL_CENTER_MS = 420;
@@ -25,6 +31,7 @@ const TYPEWRITER_PAPER_LINE_HEIGHT_PX = 24;
 const TYPEWRITER_REVEAL_TARGET_HEIGHT_PX = 350;
 const TYPEWRITER_COUNTDOWN_LOADED_HEIGHT_PX = 250;
 const TYPEWRITER_COUNTDOWN_MID_HEIGHT_PX = 150;
+const TYPEWRITER_WELCOME_COUNTDOWN_MID_HEIGHT_PX = 204;
 const TYPEWRITER_COUNTDOWN_SHRINK_DELAY_MS = 100;
 const COUNTDOWN_PHASE_SOUND_SOURCES = {
   primed: rodSlideSound,
@@ -34,12 +41,17 @@ const COUNTDOWN_PHASE_SOUND_SOURCES = {
 
 function TypedPage({
   completedWords,
+  countdownElapsedMs = 0,
   countdownValue = null,
   currentWordFragment,
   isTypewriterActive = false,
   isRevealed = false,
+  isWelcome = false,
+  isWelcomeTransitioning = false,
   lineWordCounts,
+  welcomeContent = null,
 }) {
+  // State and refs
   const viewportRef = useRef(null);
   const paperRef = useRef(null);
   const caretMarkerRef = useRef(null);
@@ -47,19 +59,20 @@ function TypedPage({
   const basePaperOffsetXRef = useRef(null);
   const previousLineIndexRef = useRef(0);
   const animationTimeoutsRef = useRef([]);
-  const countdownAudioPlayersRef = useRef(null);
+  const typewriterAudioPlayersRef = useRef(null);
   const lastPlayedCountdownSoundPhaseRef = useRef("idle");
+  const lastPlayedRevealSoundPhaseRef = useRef("idle");
+  const lastDingedLineIndexRef = useRef(-1);
   const [paperOffset, setPaperOffset] = useState({ x: 0, y: 0 });
   const [paperLineCount, setPaperLineCount] = useState(1);
   const [motionPhase, setMotionPhase] = useState("typing");
   const [revealPhase, setRevealPhase] = useState("centering");
-  const [countdownPaperPhase, setCountdownPaperPhase] = useState(() =>
-    getInitialCountdownPaperPhase(countdownValue),
-  );
+
+  // Derived values
   const hasTypedContent =
     completedWords.length > 0 || Boolean(currentWordFragment);
   const isCountingDown =
-    countdownValue !== null && !hasTypedContent && !isRevealed;
+    countdownValue !== null && !hasTypedContent && !isRevealed && !isWelcome;
   const typewriterLines = useMemo(
     () =>
       getTypewriterLines({
@@ -71,12 +84,29 @@ function TypedPage({
   );
   const typedText = typewriterLines.join("\n");
   const currentLineIndex = typewriterLines.length - 1;
+  const currentLineText = typewriterLines[currentLineIndex] ?? "";
   const renderedLineCount = Math.max(1, typewriterLines.length);
   const currentPaperHeight = getPaperHeight(paperLineCount);
   const revealPaperHeight = getRevealPaperHeight(
     getPaperHeight(renderedLineCount),
   );
-  const countdownPaperHeight = getCountdownPaperHeight(countdownPaperPhase);
+  const countdownPaperPhase = getCountdownPaperPhase({
+    countdownElapsedMs,
+    countdownValue,
+    isCountingDown,
+    isWelcomeTransitioning,
+  });
+  const isWelcomeIntakeReady =
+    isWelcomeTransitioning &&
+    countdownValue >= 3 &&
+    countdownPaperPhase === "welcome-loaded";
+  const isWelcomeIntake = isCountingDown && isWelcomeTransitioning;
+  const isWelcomeContentVisible =
+    isWelcome || (isWelcomeIntake && countdownValue >= 3);
+  const countdownPaperHeight = getCountdownPaperHeight(
+    countdownPaperPhase,
+    isWelcomeTransitioning,
+  );
   let paperHeight = currentPaperHeight;
 
   if (isRevealed && revealPhase !== "centering") {
@@ -91,6 +121,7 @@ function TypedPage({
   const countdownPaperOffsetY =
     TYPEWRITER_PAPER_START_HEIGHT_PX - countdownPaperHeight;
 
+  // Effects
   useEffect(
     () => () => {
       clearAnimationTimeouts(animationTimeoutsRef);
@@ -99,29 +130,8 @@ function TypedPage({
   );
 
   useEffect(() => {
-    if (!isCountingDown) {
-      setCountdownPaperPhase("idle");
-      return undefined;
-    }
-
-    if (countdownValue >= 3) {
-      setCountdownPaperPhase("loaded");
-
-      const shrinkTimeoutId = window.setTimeout(() => {
-        setCountdownPaperPhase("shrinking-first");
-      }, TYPEWRITER_COUNTDOWN_SHRINK_DELAY_MS);
-
-      return () => {
-        window.clearTimeout(shrinkTimeoutId);
-      };
-    }
-
-    setCountdownPaperPhase(
-      countdownValue === 2 ? "shrinking-final" : "primed",
-    );
-
-    return undefined;
-  }, [countdownValue, isCountingDown]);
+    preloadAudioSource(dingSound, typewriterAudioPlayersRef);
+  }, []);
 
   useEffect(() => {
     if (!isCountingDown) {
@@ -140,8 +150,25 @@ function TypedPage({
     }
 
     lastPlayedCountdownSoundPhaseRef.current = countdownPaperPhase;
-    playAudioSource(soundSource, countdownAudioPlayersRef);
+    playAudioSource(soundSource, typewriterAudioPlayersRef);
   }, [countdownPaperPhase, isCountingDown]);
+
+  useEffect(() => {
+    if (!isRevealed) {
+      lastPlayedRevealSoundPhaseRef.current = "idle";
+      return;
+    }
+
+    if (
+      revealPhase !== "pulling" ||
+      lastPlayedRevealSoundPhaseRef.current === revealPhase
+    ) {
+      return;
+    }
+
+    lastPlayedRevealSoundPhaseRef.current = revealPhase;
+    playAudioSource(paperUnloadSound, typewriterAudioPlayersRef);
+  }, [isRevealed, revealPhase]);
 
   useEffect(() => {
     if (!isRevealed) {
@@ -167,8 +194,9 @@ function TypedPage({
     };
   }, [isRevealed, renderedLineCount]);
 
+  // Paper measurement and motion
   useLayoutEffect(() => {
-    if (isRevealed) {
+    if (isRevealed || isWelcomeContentVisible) {
       return undefined;
     }
 
@@ -204,12 +232,35 @@ function TypedPage({
       };
 
       if (!hasTypedContent) {
+        lastDingedLineIndexRef.current = -1;
         previousLineIndexRef.current = 0;
         clearAnimationTimeouts(animationTimeoutsRef);
         setMotionPhase("typing");
         setPaperLineCount(nextPaperLineCount);
         setPaperOffset(nextPaperOffset);
         return;
+      }
+
+      if (
+        currentLineText.length > 0 &&
+        lastDingedLineIndexRef.current !== currentLineIndex
+      ) {
+        const paperStyle = window.getComputedStyle(paperElement);
+        const paperPaddingLeft = Number.parseFloat(paperStyle.paddingLeft) || 0;
+        const paperPaddingRight = Number.parseFloat(paperStyle.paddingRight) || 0;
+        const typedLineWidth = caretCenterX - paperRect.left - paperPaddingLeft;
+        const characterWidth = typedLineWidth / currentLineText.length;
+        const distanceToRightMargin =
+          paperRect.right - paperPaddingRight - caretCenterX;
+
+        if (
+          characterWidth > 0 &&
+          distanceToRightMargin <=
+            characterWidth * TYPEWRITER_DING_MARGIN_CHARACTERS
+        ) {
+          lastDingedLineIndexRef.current = currentLineIndex;
+          playAudioSource(dingSound, typewriterAudioPlayersRef);
+        }
       }
 
       const hasMovedToNewLine = currentLineIndex > previousLineIndexRef.current;
@@ -260,63 +311,89 @@ function TypedPage({
     return () => {
       window.removeEventListener("resize", updatePaperOffset);
     };
-  }, [currentLineIndex, hasTypedContent, isRevealed, typedText]);
-
-  const paperPhaseClassName = isRevealed
-    ? `typewriter-paper-reveal-${revealPhase}`
-    : `typewriter-paper-${motionPhase}`;
-  const countdownPaperClassName = getCountdownPaperClassName({
-    countdownPaperPhase,
+  }, [
+    currentLineIndex,
     hasTypedContent,
     isRevealed,
+    isWelcomeContentVisible,
+    typedText,
+  ]);
+
+  // Render values
+  const paperPhaseClassName = isWelcome
+    ? "typewriter-paper-welcome"
+    : isRevealed
+      ? `typewriter-paper-reveal-${revealPhase}`
+      : `typewriter-paper-${motionPhase}`;
+  const countdownClassName = getCountdownClassName({
+    countdownPaperPhase,
+    isCountingDown,
   });
   const rodPhaseClassName = isRevealed
     ? `typewriter-rod-reveal-${revealPhase}`
     : `typewriter-rod-${motionPhase}`;
-  const countdownRodClassName = getCountdownRodClassName({
-    countdownPaperPhase,
-    hasTypedContent,
-    isRevealed,
-  });
-  const rodOffsetX =
+  const welcomeIntakeClassName = isWelcomeIntake
+    ? ` typewriter-paper-welcome-intake${
+        isWelcomeIntakeReady
+          ? " typewriter-paper-welcome-intake-ready"
+          : ""
+      }`
+    : "";
+  const typingCarriageOffsetX =
     basePaperOffsetXRef.current === null
       ? 0
       : paperOffset.x - basePaperOffsetXRef.current;
+  const isCarriageCentered =
+    isWelcome ||
+    isRevealed ||
+    (isCountingDown && countdownPaperPhase !== "primed");
+  const carriageOffsetX = isCarriageCentered ? 0 : typingCarriageOffsetX;
 
+  // Render
   return (
     <section
-      aria-label="Typed letter"
+      aria-label={isWelcomeContentVisible ? "Welcome" : "Typed letter"}
       className={`typewriter-viewport${
         isRevealed ? " typewriter-viewport-revealed" : ""
-      }`}
+      }${
+        isWelcome || isWelcomeIntake ? " typewriter-viewport-welcome" : ""
+      }${isWelcome ? " typewriter-carriage-welcome" : ""}${countdownClassName}`}
       ref={viewportRef}
+      style={{
+        "--typewriter-carriage-offset-x": `${carriageOffsetX}px`,
+      }}
     >
       <div
-        className={`typed-page typewriter-paper ${paperPhaseClassName}${countdownPaperClassName}`}
+        className={`typed-page typewriter-paper ${paperPhaseClassName}${welcomeIntakeClassName}`}
         ref={paperRef}
         style={{
-          "--paper-offset-x": `${paperOffset.x}px`,
-          "--paper-offset-y": `${paperOffset.y}px`,
-          "--typewriter-paper-height": `${paperHeight}px`,
+          "--typewriter-typing-paper-offset-y": `${paperOffset.y}px`,
+          "--typewriter-paper-height": isWelcome || isWelcomeIntakeReady
+            ? "var(--typewriter-welcome-paper-height)"
+            : `${paperHeight}px`,
           "--typewriter-countdown-paper-offset-y": `${countdownPaperOffsetY}px`,
           "--typewriter-reveal-pull-offset-y": `${revealPullOffsetY}px`,
           "--typewriter-line-width": `${TYPEWRITER_LINE_LENGTH}ch`,
         }}
       >
-        <p className="pixel-text typed-page-text">
-          {typewriterLines.map((line, index) => (
-            <span className="typed-page-line" key={`${index}-${line}`}>
-              {line}
-              {index === currentLineIndex ? (
-                <span
-                  aria-hidden="true"
-                  className="typewriter-caret-marker"
-                  ref={caretMarkerRef}
-                />
-              ) : null}
-            </span>
-          ))}
-        </p>
+        {isWelcomeContentVisible ? (
+          welcomeContent
+        ) : (
+          <p className="pixel-text typed-page-text">
+            {typewriterLines.map((line, index) => (
+              <span className="typed-page-line" key={`${index}-${line}`}>
+                {line}
+                {index === currentLineIndex ? (
+                  <span
+                    aria-hidden="true"
+                    className="typewriter-caret-marker"
+                    ref={caretMarkerRef}
+                  />
+                ) : null}
+              </span>
+            ))}
+          </p>
+        )}
         {isRevealed ? (
           <p className="pixel-text typed-page-reveal-note">
             <span>With all the love in my heart</span>
@@ -327,11 +404,8 @@ function TypedPage({
       <img
         alt=""
         aria-hidden="true"
-        className={`typewriter-sprite typewriter-rod ${rodPhaseClassName}${countdownRodClassName}`}
+        className={`typewriter-sprite typewriter-rod ${rodPhaseClassName}`}
         src={typewriterRodSprite}
-        style={{
-          "--typewriter-rod-offset-x": `${rodOffsetX}px`,
-        }}
       />
       <img
         alt=""
@@ -353,51 +427,55 @@ function TypedPage({
   );
 }
 
-function getCountdownPaperClassName({
+// Paper geometry
+function getCountdownClassName({
   countdownPaperPhase,
-  hasTypedContent,
-  isRevealed,
+  isCountingDown,
 }) {
-  if (hasTypedContent || isRevealed || countdownPaperPhase === "idle") {
+  if (
+    !isCountingDown ||
+    countdownPaperPhase === "idle" ||
+    countdownPaperPhase === "welcome-loaded"
+  ) {
     return "";
   }
 
-  return ` typewriter-paper-countdown-${countdownPaperPhase}`;
+  return ` typewriter-countdown-${countdownPaperPhase}`;
 }
 
-function getCountdownRodClassName({
-  countdownPaperPhase,
-  hasTypedContent,
-  isRevealed,
+function getCountdownPaperPhase({
+  countdownElapsedMs,
+  countdownValue,
+  isCountingDown,
+  isWelcomeTransitioning,
 }) {
-  if (hasTypedContent || isRevealed || countdownPaperPhase === "idle") {
-    return "";
-  }
-
-  return countdownPaperPhase === "primed"
-    ? " typewriter-rod-countdown-primed"
-    : " typewriter-rod-countdown-centered";
-}
-
-function getInitialCountdownPaperPhase(countdownValue) {
-  if (countdownValue === null) {
+  if (!isCountingDown) {
     return "idle";
   }
 
   if (countdownValue >= 3) {
-    return "loaded";
+    if (countdownElapsedMs < TYPEWRITER_COUNTDOWN_SHRINK_DELAY_MS) {
+      return isWelcomeTransitioning ? "welcome-loaded" : "loaded";
+    }
+
+    return "shrinking-first";
   }
 
   return countdownValue === 2 ? "shrinking-final" : "primed";
 }
 
-function getCountdownPaperHeight(countdownPaperPhase) {
+function getCountdownPaperHeight(
+  countdownPaperPhase,
+  isWelcomeTransitioning,
+) {
   if (countdownPaperPhase === "loaded") {
     return TYPEWRITER_COUNTDOWN_LOADED_HEIGHT_PX;
   }
 
   if (countdownPaperPhase === "shrinking-first") {
-    return TYPEWRITER_COUNTDOWN_MID_HEIGHT_PX;
+    return isWelcomeTransitioning
+      ? TYPEWRITER_WELCOME_COUNTDOWN_MID_HEIGHT_PX
+      : TYPEWRITER_COUNTDOWN_MID_HEIGHT_PX;
   }
 
   return TYPEWRITER_PAPER_START_HEIGHT_PX;
@@ -414,111 +492,7 @@ function getRevealPaperHeight(contentHeight) {
   return Math.max(contentHeight, TYPEWRITER_REVEAL_TARGET_HEIGHT_PX);
 }
 
-function getTypewriterLines({
-  completedWords,
-  currentWordFragment,
-  lineWordCounts,
-}) {
-  if (!completedWords.length && !currentWordFragment) {
-    return [""];
-  }
-
-  if (!lineWordCounts?.length) {
-    return getCharacterWrappedLines(
-      joinWords(completedWords, currentWordFragment),
-    );
-  }
-
-  const lines = [];
-  const activeWordIndex = completedWords.length;
-  let wordIndex = 0;
-
-  for (let lineIndex = 0; lineIndex < lineWordCounts.length; lineIndex += 1) {
-    const wordCount = lineWordCounts[lineIndex];
-
-    if (wordCount === 0) {
-      if (lines.length > 0 && wordIndex <= completedWords.length) {
-        lines.push("");
-      }
-
-      continue;
-    }
-
-    const lineEndIndex = wordIndex + wordCount;
-    const completedLineWords = completedWords.slice(
-      wordIndex,
-      Math.min(completedWords.length, lineEndIndex),
-    );
-    const hasActiveWordOnLine =
-      Boolean(currentWordFragment) &&
-      activeWordIndex >= wordIndex &&
-      activeWordIndex < lineEndIndex;
-    const lineWords = hasActiveWordOnLine
-      ? [...completedLineWords, currentWordFragment]
-      : completedLineWords;
-
-    if (lineWords.length > 0) {
-      lines.push(lineWords.join(" "));
-    }
-
-    if (hasActiveWordOnLine || completedWords.length < lineEndIndex) {
-      return lines.length ? lines : [""];
-    }
-
-    wordIndex = lineEndIndex;
-
-    if (!currentWordFragment && completedWords.length === lineEndIndex) {
-      appendNextLinePreview(lines, lineWordCounts, lineIndex + 1);
-
-      return lines.length ? lines : [""];
-    }
-  }
-
-  if (wordIndex < completedWords.length || currentWordFragment) {
-    lines.push(
-      ...getCharacterWrappedLines(
-        joinWords(completedWords.slice(wordIndex), currentWordFragment),
-      ),
-    );
-  }
-
-  return lines.length ? lines : [""];
-}
-
-function getCharacterWrappedLines(text) {
-  if (!text) {
-    return [""];
-  }
-
-  const lines = [];
-
-  for (let index = 0; index < text.length; index += TYPEWRITER_LINE_LENGTH) {
-    lines.push(text.slice(index, index + TYPEWRITER_LINE_LENGTH));
-  }
-
-  return lines;
-}
-
-function appendNextLinePreview(lines, lineWordCounts, startLineIndex) {
-  for (
-    let lineIndex = startLineIndex;
-    lineIndex < lineWordCounts.length;
-    lineIndex += 1
-  ) {
-    lines.push("");
-
-    if (lineWordCounts[lineIndex] > 0) {
-      return;
-    }
-  }
-}
-
-function joinWords(completedWords, currentWordFragment) {
-  return currentWordFragment
-    ? [...completedWords, currentWordFragment].join(" ")
-    : completedWords.join(" ");
-}
-
+// Animation and audio helpers
 function clearAnimationTimeouts(timeoutsRef) {
   timeoutsRef.current.forEach((timeoutId) => {
     window.clearTimeout(timeoutId);
@@ -527,33 +501,21 @@ function clearAnimationTimeouts(timeoutsRef) {
 }
 
 function playAudioSource(source, audioPlayersRef) {
-  if (typeof Audio === "undefined") {
-    return;
-  }
+  preloadAudioSource(source, audioPlayersRef);
+  restartAudio(audioPlayersRef.current?.get(source));
+}
 
+function preloadAudioSource(source, audioPlayersRef) {
   if (audioPlayersRef.current === null) {
     audioPlayersRef.current = new Map();
   }
 
-  let audio = audioPlayersRef.current.get(source);
+  if (!audioPlayersRef.current.has(source)) {
+    const audio = createPreloadedAudio(source);
 
-  if (!audio) {
-    audio = new Audio(source);
-    audio.preload = "auto";
-    audioPlayersRef.current.set(source, audio);
-  }
-
-  try {
-    audio.pause();
-    audio.currentTime = 0;
-
-    const playPromise = audio.play();
-
-    if (playPromise) {
-      playPromise.catch(() => {});
+    if (audio) {
+      audioPlayersRef.current.set(source, audio);
     }
-  } catch {
-    // Audio playback can be blocked by browser policy; the animation should continue.
   }
 }
 

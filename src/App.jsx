@@ -91,6 +91,7 @@ function App() {
   const cheatCodeInputRef = useRef({ input: "", lastInputAt: 0 });
   const typewriterKeyTimeoutRef = useRef(null);
   const titlePatternRequestIdRef = useRef(0);
+  const resultRevealAnchorRef = useRef(null);
   const [titlePatternRequest, setTitlePatternRequest] = useState(null);
   const isAudioMuted = useSyncExternalStore(
     subscribeAudioMuted,
@@ -575,6 +576,7 @@ function App() {
         onTitleKeyPress={handleTitleKeyPress}
         onToggleAudioMuted={handleToggleAudioMuted}
         onToggleTimerPause={handleToggleTimerPause}
+        revealAnchorRef={resultRevealAnchorRef}
         centisecondsRemaining={Math.ceil(
           (timerRampRemainingMs ?? remainingMs) / 10,
         )}
@@ -623,7 +625,7 @@ function App() {
               gameState.status === "failed" ? handleStart : undefined
             }
             revealNoteLines={revealNoteLines}
-            shouldLiftAfterReveal={gameState.status === "complete"}
+            revealAnchorRef={resultRevealAnchorRef}
             welcomeContent={welcomeContent}
           />
         </div>

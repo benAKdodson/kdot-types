@@ -770,21 +770,12 @@ button:focus-visible {
     transform 360ms steps(8, end);
 }
 
-.typewriter-paper-reveal-stationary.typewriter-paper-reveal-pulling {
-  transform: translate(
-    calc(50vw - 50% + var(--typewriter-carriage-offset-x, 0px)),
-    calc(
-      var(--typewriter-paper-align-y) +
-        var(--typewriter-stationary-reveal-offset-y, 0px)
-    )
-  );
-}
-
 .typewriter-paper-reveal-lifting {
   transform: translate(
     calc(50vw - 50% + var(--typewriter-carriage-offset-x, 0px)),
     calc(
-      var(--typewriter-reveal-top) - 100vh +
+      var(--typewriter-reveal-anchor-y, var(--typewriter-reveal-top)) +
+        var(--stage-stack-gap) - 100vh +
         var(--typewriter-viewport-height)
     )
   );

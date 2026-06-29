@@ -23,6 +23,7 @@ function TopHud({
   onTitleKeyPress,
   onToggleAudioMuted,
   onToggleTimerPause,
+  revealAnchorRef,
   centisecondsRemaining,
   titlePatternRequest,
 }) {
@@ -58,7 +59,11 @@ function TopHud({
         patternRequest={titlePatternRequest}
       />
 
-      <div className="ui-bar" aria-label="Typing test controls">
+      <div
+        aria-label="Typing test controls"
+        className="ui-bar"
+        ref={revealAnchorRef}
+      >
         <div
           aria-label={`${health} of ${maxHealth} hearts remaining`}
           className={`health-meter${

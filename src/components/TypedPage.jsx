@@ -35,7 +35,6 @@ const TYPEWRITER_RETURN_LONG_SOUND_RATIO = 0.7;
 const TYPEWRITER_LINE_FEED_MS = 120;
 const TYPEWRITER_REVEAL_CENTER_MS = 420;
 const TYPEWRITER_REVEAL_PULL_MS = 360;
-const TYPEWRITER_STATIONARY_REVEAL_EXTRA_PULL_PX = 12;
 const TYPEWRITER_PAPER_START_HEIGHT_PX = 60;
 const TYPEWRITER_PAPER_LINE_HEIGHT_PX = 24;
 const TYPEWRITER_REVEAL_TARGET_HEIGHT_PX = 350;
@@ -62,8 +61,8 @@ function TypedPage({
   missedWordIndexes = [],
   onTryAgain,
   pressedTypewriterKeys = [],
+  revealAnchorRef,
   revealNoteLines = [],
-  shouldLiftAfterReveal = true,
   welcomeContent = null,
 }) {
   // State and refs
@@ -143,10 +142,6 @@ function TypedPage({
     0,
     currentPaperHeight - revealPaperHeight,
   );
-  const stationaryRevealOffsetY =
-    TYPEWRITER_PAPER_START_HEIGHT_PX -
-    revealPaperHeight -
-    TYPEWRITER_STATIONARY_REVEAL_EXTRA_PULL_PX;
   const countdownPaperOffsetY =
     TYPEWRITER_PAPER_START_HEIGHT_PX - countdownPaperHeight;
 
@@ -216,20 +211,45 @@ function TypedPage({
     const pullTimeoutId = window.setTimeout(() => {
       setRevealPhase("pulling");
     }, TYPEWRITER_REVEAL_CENTER_MS);
-    const liftTimeoutId = shouldLiftAfterReveal
-      ? window.setTimeout(() => {
-          setRevealPhase("lifting");
-        }, TYPEWRITER_REVEAL_CENTER_MS + TYPEWRITER_REVEAL_PULL_MS)
-      : null;
+    const liftTimeoutId = window.setTimeout(() => {
+      setRevealPhase("lifting");
+    }, TYPEWRITER_REVEAL_CENTER_MS + TYPEWRITER_REVEAL_PULL_MS);
 
     return () => {
       window.clearTimeout(pullTimeoutId);
-
-      if (liftTimeoutId !== null) {
-        window.clearTimeout(liftTimeoutId);
-      }
+      window.clearTimeout(liftTimeoutId);
     };
-  }, [isRevealed, renderedLineCount, shouldLiftAfterReveal]);
+  }, [isRevealed, renderedLineCount]);
+
+  useLayoutEffect(() => {
+    const viewportElement = viewportRef.current;
+    const revealAnchorElement = revealAnchorRef?.current;
+
+    if (!isRevealed || !viewportElement || !revealAnchorElement) {
+      return undefined;
+    }
+
+    function updateRevealAnchor() {
+      const revealAnchorRect = revealAnchorElement.getBoundingClientRect();
+
+      viewportElement.style.setProperty(
+        "--typewriter-reveal-anchor-y",
+        `${revealAnchorRect.bottom}px`,
+      );
+    }
+
+    updateRevealAnchor();
+    window.addEventListener("resize", updateRevealAnchor);
+
+    const resizeObserver = new ResizeObserver(updateRevealAnchor);
+
+    resizeObserver.observe(revealAnchorElement);
+
+    return () => {
+      window.removeEventListener("resize", updateRevealAnchor);
+      resizeObserver.disconnect();
+    };
+  }, [isRevealed, revealAnchorRef]);
 
   // Paper measurement and motion
   useLayoutEffect(() => {
@@ -391,10 +411,6 @@ function TypedPage({
           : ""
       }`
     : "";
-  const stationaryRevealClassName =
-    isRevealed && !shouldLiftAfterReveal
-      ? " typewriter-paper-reveal-stationary"
-      : "";
   const typingCarriageOffsetX =
     basePaperOffsetXRef.current === null
       ? 0
@@ -422,7 +438,7 @@ function TypedPage({
       }}
     >
       <div
-        className={`typed-page typewriter-paper ${paperPhaseClassName}${stationaryRevealClassName}${welcomeIntakeClassName}`}
+        className={`typed-page typewriter-paper ${paperPhaseClassName}${welcomeIntakeClassName}`}
         ref={paperRef}
         style={{
           "--typewriter-typing-paper-offset-y": `${paperOffset.y}px`,
@@ -431,7 +447,6 @@ function TypedPage({
             : `${paperHeight}px`,
           "--typewriter-countdown-paper-offset-y": `${countdownPaperOffsetY}px`,
           "--typewriter-reveal-pull-offset-y": `${revealPullOffsetY}px`,
-          "--typewriter-stationary-reveal-offset-y": `${stationaryRevealOffsetY}px`,
           "--typewriter-line-width": `${TYPEWRITER_LINE_LENGTH}ch`,
         }}
       >

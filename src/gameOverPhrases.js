@@ -1,10 +1,8 @@
 export const GAME_OVER_PHRASES = [
   "Skill issue",
-  "How's your G key doing",
   "Could I offer you an 'H' in this tryin' time",
   "Hint - try 'ESPS'",
   "Hint - 10 seconds would be 'DOPE'"
-
 ];
 
 export function getRandomGameOverPhrase(previousPhrase = null) {

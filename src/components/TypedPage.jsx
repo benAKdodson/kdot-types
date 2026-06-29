@@ -20,7 +20,11 @@ import {
 import typewriterActiveSprite from '../Assets/Sprites/Typewriter-2-active.png';
 import typewriterRodSprite from '../Assets/Sprites/Typewriter-2-rod.png';
 import typewriterSprite from '../Assets/Sprites/Typewriter-2.png';
-import { createPreloadedAudio, restartAudio } from '../audio.js';
+import {
+  createPreloadedAudio,
+  disposeAudio,
+  restartAudio,
+} from '../audio.js';
 import {
   getTypewriterLines,
   TYPEWRITER_LINE_LENGTH,
@@ -162,6 +166,7 @@ function TypedPage({
   useEffect(
     () => () => {
       clearAnimationTimeouts(animationTimeoutsRef);
+      disposeAudioPlayers(typewriterAudioPlayersRef);
     },
     [],
   );
@@ -709,6 +714,12 @@ function preloadAudioSource(source, audioPlayersRef) {
       audioPlayersRef.current.set(source, audio);
     }
   }
+}
+
+function disposeAudioPlayers(audioPlayersRef) {
+  audioPlayersRef.current?.forEach(disposeAudio);
+  audioPlayersRef.current?.clear();
+  audioPlayersRef.current = null;
 }
 
 export default TypedPage;

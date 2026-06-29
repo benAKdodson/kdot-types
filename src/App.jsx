@@ -14,6 +14,7 @@ import timerUpSound from './Assets/Sounds/timerup.wav';
 import victorySound from './Assets/Sounds/victory.wav';
 import {
   createPreloadedAudio,
+  disposeAudio,
   getAudioMuted,
   restartAudio,
   setAudioMuted,
@@ -42,6 +43,7 @@ import {
 import { getRandomGameOverPhrase } from './gameOverPhrases.js';
 import { isInteractiveTarget } from './helpers.js';
 import {
+  disposeKeyPressSounds,
   playRandomKeyPressSound,
   preloadKeyPressSounds,
 } from './keyPressSounds.js';
@@ -135,16 +137,28 @@ function App() {
 
   // Effects
   useEffect(() => {
-    damageAudioRef.current = createPreloadedAudio(damageSound);
-    levelUpAudioRef.current = createPreloadedAudio(levelUpSound);
-    timerUpAudioRef.current = createPreloadedAudio(timerUpSound);
-    victoryAudioRef.current = createPreloadedAudio(victorySound);
-    gameOverAudioRef.current = createPreloadedAudio(gameOverSound);
+    const audioRefs = [
+      [damageAudioRef, damageSound],
+      [levelUpAudioRef, levelUpSound],
+      [timerUpAudioRef, timerUpSound],
+      [victoryAudioRef, victorySound],
+      [gameOverAudioRef, gameOverSound],
+    ];
+
+    audioRefs.forEach(([audioRef, source]) => {
+      audioRef.current = createPreloadedAudio(source);
+    });
 
     return () => {
       if (timerRampAnimationFrameRef.current !== null) {
         window.cancelAnimationFrame(timerRampAnimationFrameRef.current);
+        timerRampAnimationFrameRef.current = null;
       }
+
+      audioRefs.forEach(([audioRef]) => {
+        disposeAudio(audioRef.current);
+        audioRef.current = null;
+      });
     };
   }, []);
 
@@ -280,6 +294,7 @@ function App() {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleWindowBlur);
       clearTypewriterKeyTimeout();
+      disposeKeyPressSounds();
     };
   }, []);
 

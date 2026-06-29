@@ -14,6 +14,22 @@ export function createPreloadedAudio(source) {
   return audio;
 }
 
+export function disposeAudio(audio) {
+  if (!audio) {
+    return;
+  }
+
+  audioInstances.delete(audio);
+
+  try {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+  } catch {
+    // Audio cleanup should not interfere with application teardown.
+  }
+}
+
 export function getAudioMuted() {
   return audioMuted;
 }

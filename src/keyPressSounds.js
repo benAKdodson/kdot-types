@@ -1,4 +1,8 @@
-import { createPreloadedAudio, restartAudio } from "./audio.js";
+import {
+  createPreloadedAudio,
+  disposeAudio,
+  restartAudio,
+} from "./audio.js";
 
 const KEY_PRESS_SOUND_MODULES = import.meta.glob(
   "./Assets/Sounds/Presses/*.mp3",
@@ -59,6 +63,14 @@ export function preloadKeyPressSounds() {
   KEY_PRESS_SOUND_SOURCES.forEach((source) => {
     getAudioPool(source);
   });
+}
+
+export function disposeKeyPressSounds() {
+  audioPools.forEach(({ voices }) => {
+    voices.forEach(disposeAudio);
+  });
+  audioPools.clear();
+  lastSoundIndex = -1;
 }
 
 export function playRandomKeyPressSound() {

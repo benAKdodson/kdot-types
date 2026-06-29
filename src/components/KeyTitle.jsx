@@ -1,4 +1,5 @@
 import {
+  memo,
   useEffect,
   useRef,
   useState,
@@ -14,12 +15,6 @@ import {
 
 const TITLE_KEY_MANUAL_IDLE_DELAY_MS = 2000;
 
-function getTitleKeySprite(key, isPressed) {
-  const sprite = KEY_SPRITES[key];
-
-  return isPressed ? sprite.pressed : sprite.normal;
-}
-
 function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) {
   // State and refs
   const [animatedPressedKeyIndexes, setAnimatedPressedKeyIndexes] = useState([]);
@@ -28,7 +23,10 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
   const heldKeyIndexesRef = useRef(new Set());
   const idleDelayUntilRef = useRef(0);
   const isPatternPlayingRef = useRef(false);
+  const onManualKeyPressRef = useRef(onManualKeyPress);
   const scheduleNextPatternRef = useRef(null);
+
+  onManualKeyPressRef.current = onManualKeyPress;
 
   // Actions and handlers
   function clearAnimationTimeout() {
@@ -72,7 +70,7 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
     setHeldKeyIndexes([...nextHeldKeyIndexes]);
 
     if (isHeld) {
-      onManualKeyPress?.(TITLE_KEYS[index]);
+      onManualKeyPressRef.current?.(TITLE_KEYS[index]);
     }
 
     delayIdleAnimations();
@@ -234,6 +232,7 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
         const isPressed =
           animatedPressedKeyIndexes.includes(index) ||
           heldKeyIndexes.includes(index);
+        const sprite = KEY_SPRITES[key];
 
         return (
           <button
@@ -249,15 +248,26 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
             onPointerUp={() => handlePointerRelease(index)}
             type="button"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              className={`key-title-sprite${
-                isPressed ? " key-title-sprite-pressed" : ""
+            <span
+              className={`key-title-sprite-stack${
+                isPressed ? " key-title-sprite-stack-pressed" : ""
               }`}
-              draggable={false}
-              src={getTitleKeySprite(key, isPressed)}
-            />
+            >
+              <img
+                alt=""
+                aria-hidden="true"
+                className="key-title-sprite key-title-sprite-normal"
+                draggable={false}
+                src={sprite.normal}
+              />
+              <img
+                alt=""
+                aria-hidden="true"
+                className="key-title-sprite key-title-sprite-depressed"
+                draggable={false}
+                src={sprite.pressed}
+              />
+            </span>
           </button>
         );
       })}
@@ -265,4 +275,11 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
   );
 }
 
-export default KeyTitle;
+function areKeyTitlePropsEqual(previousProps, nextProps) {
+  return (
+    previousProps.isIdleAnimationEnabled === nextProps.isIdleAnimationEnabled &&
+    previousProps.patternRequest === nextProps.patternRequest
+  );
+}
+
+export default memo(KeyTitle, areKeyTitlePropsEqual);

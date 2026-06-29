@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function CountdownWord({ value }) {
   return (
     <div className="word-line countdown-line" aria-label="Starting countdown">
@@ -8,4 +10,4 @@ function CountdownWord({ value }) {
   );
 }
 
-export default CountdownWord;
+export default memo(CountdownWord);

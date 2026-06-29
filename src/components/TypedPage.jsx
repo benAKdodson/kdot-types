@@ -1,5 +1,6 @@
 import {
   Fragment,
+  memo,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -13,13 +14,7 @@ import paperLoad2Sound from '../Assets/Sounds/paper-load-2.mp3';
 import paperUnloadSound from '../Assets/Sounds/paper-unload.mp3';
 import rodSlideLongSound from '../Assets/Sounds/rod-slide-long.mp3';
 import rodSlideSound from '../Assets/Sounds/rod-slide.mp3';
-import {
-  TYPEWRITER_CAPS_LOCK_SPRITE,
-  TYPEWRITER_KEY_SPRITES,
-} from '../Assets/Sprites/Keys';
-import typewriterActiveSprite from '../Assets/Sprites/Typewriter-2-active.png';
 import typewriterRodSprite from '../Assets/Sprites/Typewriter-2-rod.png';
-import typewriterSprite from '../Assets/Sprites/Typewriter-2.png';
 import {
   createPreloadedAudio,
   disposeAudio,
@@ -29,14 +24,10 @@ import {
   getTypewriterLines,
   TYPEWRITER_LINE_LENGTH,
 } from '../typewriterText.js';
+import TypewriterBody from './TypewriterBody.jsx';
 
 // Constants
 const TYPEWRITER_DING_MARGIN_CHARACTERS = 5;
-const TYPEWRITER_KEYS_WITHOUT_ACTIVE_FRAME = new Set([
-  'enter',
-  'shift',
-  'space',
-]);
 const TYPEWRITER_RETURN_MIN_MS = 180;
 const TYPEWRITER_RETURN_MAX_MS = 360;
 const TYPEWRITER_RETURN_SOUND_MIN_RATIO = 0.2;
@@ -134,9 +125,6 @@ function TypedPage({
   const isWelcomeIntake = isCountingDown && isWelcomeTransitioning;
   const isWelcomeContentVisible =
     isWelcome || (isWelcomeIntake && countdownValue >= 3);
-  const isTypewriterActive = pressedTypewriterKeys.some(
-    (key) => !TYPEWRITER_KEYS_WITHOUT_ACTIVE_FRAME.has(key),
-  );
   const countdownPaperHeight = getCountdownPaperHeight(
     countdownPaperPhase,
     isWelcomeTransitioning,
@@ -429,6 +417,7 @@ function TypedPage({
       ref={viewportRef}
       style={{
         "--typewriter-carriage-offset-x": `${carriageOffsetX}px`,
+        "--typewriter-paper-start-height": `${TYPEWRITER_PAPER_START_HEIGHT_PX}px`,
         "--typewriter-return-duration": `${returnDurationMs}ms`,
       }}
     >
@@ -451,7 +440,7 @@ function TypedPage({
         ) : (
           <p className="pixel-text typed-page-text">
             {typewriterLines.map((line, index) => (
-              <span className="typed-page-line" key={`${index}-${line}`}>
+              <span className="typed-page-line" key={index}>
                 {renderedLineWords[index].map(
                   ({ isMissed, text, wordIndex }, lineWordIndex) => (
                     <Fragment key={wordIndex}>
@@ -502,53 +491,9 @@ function TypedPage({
         className={`typewriter-sprite typewriter-rod ${rodPhaseClassName}`}
         src={typewriterRodSprite}
       />
-      <img
-        alt=""
-        aria-hidden="true"
-        className={`typewriter-sprite typewriter-sprite-base${
-          isTypewriterActive ? " typewriter-sprite-hidden" : ""
-        }`}
-        src={typewriterSprite}
-      />
-      <img
-        alt=""
-        aria-hidden="true"
-        className={`typewriter-sprite typewriter-sprite-base${
-          isTypewriterActive ? "" : " typewriter-sprite-hidden"
-        }`}
-        src={typewriterActiveSprite}
-      />
-      {TYPEWRITER_KEY_SPRITES.map(({ id, normal, pressed }) => {
-        const isPressed = pressedTypewriterKeys.includes(id);
-
-        return (
-          <Fragment key={id}>
-            <img
-              alt=""
-              aria-hidden="true"
-              className={`typewriter-sprite typewriter-key-sprite${
-                isPressed ? " typewriter-sprite-hidden" : ""
-              }`}
-              src={normal}
-            />
-            <img
-              alt=""
-              aria-hidden="true"
-              className={`typewriter-sprite typewriter-key-sprite${
-                isPressed ? "" : " typewriter-sprite-hidden"
-              }`}
-              src={pressed}
-            />
-          </Fragment>
-        );
-      })}
-      <img
-        alt=""
-        aria-hidden="true"
-        className={`typewriter-sprite typewriter-key-sprite${
-          isCapsLockEnabled ? "" : " typewriter-sprite-hidden"
-        }`}
-        src={TYPEWRITER_CAPS_LOCK_SPRITE}
+      <TypewriterBody
+        isCapsLockEnabled={isCapsLockEnabled}
+        pressedKeys={pressedTypewriterKeys}
       />
     </section>
   );
@@ -722,4 +667,4 @@ function disposeAudioPlayers(audioPlayersRef) {
   audioPlayersRef.current = null;
 }
 
-export default TypedPage;
+export default memo(TypedPage);

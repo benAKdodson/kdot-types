@@ -60,6 +60,7 @@ const TYPEWRITER_SPECIFIC_KEYS = {
 const TYPEWRITER_LINE_BREAK_COUNTS = getLineBreakCounts(
   TYPEWRITER_LINE_WORD_COUNTS,
 );
+const EMPTY_REVEAL_NOTE_LINES = [];
 const SUCCESS_NOTE_LINES = ["Happy birthday my dear. I love you so much!", "Ben"];
 
 function App() {
@@ -107,7 +108,7 @@ function App() {
       ? SUCCESS_NOTE_LINES
       : gameState.status === "failed"
         ? [gameOverPhrase]
-        : [];
+        : EMPTY_REVEAL_NOTE_LINES;
   const isResultRevealed = revealNoteLines.length > 0;
   const countdownValue = Math.max(1, Math.ceil(countdownRemainingMs / 1000));
   const countdownElapsedMs = START_COUNTDOWN_MS - countdownRemainingMs;
@@ -115,10 +116,13 @@ function App() {
     gameState.status === "playing" || gameState.status === "failed"
       ? (WORDS[gameState.wordIndex] ?? "").slice(0, gameState.charIndex)
       : "";
-  const pressedTypewriterKeys = [
-    transientTypewriterKey,
-    isShiftPressed ? "shift" : null,
-  ].filter(Boolean);
+  const pressedTypewriterKeys = useMemo(
+    () =>
+      [transientTypewriterKey, isShiftPressed ? "shift" : null].filter(
+        Boolean,
+      ),
+    [isShiftPressed, transientTypewriterKey],
+  );
 
   const positionedWords = useMemo(
     () =>
@@ -133,6 +137,15 @@ function App() {
         };
       }),
     [gameState.wordIndex],
+  );
+  const welcomeContent = useMemo(
+    () => (
+      <WelcomePanel
+        isStarting={isWelcomeTransitionActive}
+        onStart={handleStart}
+      />
+    ),
+    [gameState.status, isWelcomeTransitionActive],
   );
 
   // Effects
@@ -611,12 +624,7 @@ function App() {
             }
             revealNoteLines={revealNoteLines}
             shouldLiftAfterReveal={gameState.status === "complete"}
-            welcomeContent={
-              <WelcomePanel
-                isStarting={isWelcomeTransitionActive}
-                onStart={handleStart}
-              />
-            }
+            welcomeContent={welcomeContent}
           />
         </div>
       </div>

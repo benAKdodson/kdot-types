@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function getPositionClass(offset) {
   if (offset < -4) {
     return "word-offscreen-left";
@@ -46,4 +48,4 @@ function Word({ charIndex, distance, isActive, offset, word }) {
   );
 }
 
-export default Word;
+export default memo(Word);

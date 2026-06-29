@@ -13,7 +13,7 @@ const KEY_PRESS_SOUND_MODULES = import.meta.glob(
 );
 
 const KEY_PRESS_SOUND_SOURCES = Object.values(KEY_PRESS_SOUND_MODULES).sort();
-const VOICES_PER_SOUND = 4;
+const VOICES_PER_SOUND = 1;
 const audioPools = new Map();
 let lastSoundIndex = -1;
 

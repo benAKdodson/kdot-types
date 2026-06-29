@@ -246,7 +246,7 @@ button:focus-visible {
   width: var(--key-title-key-size);
 }
 
-.key-title-sprite {
+.key-title-sprite-stack {
   --key-title-shadow-bottom-color: rgba(28, 61, 34, 0.28);
   --key-title-shadow-bottom-y: 8px;
   --key-title-shadow-left-x: -3px;
@@ -269,9 +269,7 @@ button:focus-visible {
         var(--key-title-shadow-bottom-color)
     );
   height: 100%;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-  pointer-events: none;
+  position: relative;
   transform: translateY(var(--key-title-translate-y));
   transition:
     filter 90ms steps(2, end),
@@ -280,7 +278,7 @@ button:focus-visible {
   width: 100%;
 }
 
-.key-title-sprite-pressed {
+.key-title-sprite-stack-pressed {
   --key-title-shadow-bottom-color: rgba(28, 61, 34, 0.22);
   --key-title-shadow-bottom-y: 3px;
   --key-title-shadow-left-x: -2px;
@@ -288,6 +286,27 @@ button:focus-visible {
   --key-title-shadow-side-color: rgba(28, 61, 34, 0.14);
   --key-title-shadow-side-y: 2px;
   --key-title-translate-y: 4px;
+}
+
+.key-title-sprite {
+  display: block;
+  height: 100%;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  width: 100%;
+}
+
+.key-title-sprite-depressed,
+.key-title-sprite-stack-pressed .key-title-sprite-normal {
+  opacity: 0;
+}
+
+.key-title-sprite-stack-pressed .key-title-sprite-depressed {
+  opacity: 1;
 }
 
 .key-title-space {
@@ -667,8 +686,9 @@ button:focus-visible {
   transform: translate(
     calc(50vw - 50% + var(--typewriter-carriage-offset-x, 0px)),
     calc(
-      var(--typewriter-reveal-top) - 100vh +
-        var(--typewriter-viewport-height)
+      var(--typewriter-paper-align-y) +
+        var(--typewriter-paper-start-height) -
+        var(--typewriter-welcome-paper-height)
     )
   );
   transition: none;
@@ -852,10 +872,6 @@ button:focus-visible {
 
 .typewriter-sprite-base {
   z-index: 4;
-}
-
-.typewriter-key-sprite {
-  z-index: 5;
 }
 
 .typewriter-rod {

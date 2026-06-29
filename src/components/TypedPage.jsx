@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -10,10 +11,15 @@ import dingSound from '../Assets/Sounds/ding.mp3';
 import paperLoad1Sound from '../Assets/Sounds/paper-load-1.mp3';
 import paperLoad2Sound from '../Assets/Sounds/paper-load-2.mp3';
 import paperUnloadSound from '../Assets/Sounds/paper-unload.mp3';
+import rodSlideLongSound from '../Assets/Sounds/rod-slide-long.mp3';
 import rodSlideSound from '../Assets/Sounds/rod-slide.mp3';
-import typewriterActiveSprite from '../Assets/Typewriter-2-active.png';
-import typewriterRodSprite from '../Assets/Typewriter-2-rod.png';
-import typewriterSprite from '../Assets/Typewriter-2.png';
+import {
+  TYPEWRITER_CAPS_LOCK_SPRITE,
+  TYPEWRITER_KEY_SPRITES,
+} from '../Assets/Sprites/Keys';
+import typewriterActiveSprite from '../Assets/Sprites/Typewriter-2-active.png';
+import typewriterRodSprite from '../Assets/Sprites/Typewriter-2-rod.png';
+import typewriterSprite from '../Assets/Sprites/Typewriter-2.png';
 import { createPreloadedAudio, restartAudio } from '../audio.js';
 import {
   getTypewriterLines,
@@ -22,10 +28,19 @@ import {
 
 // Constants
 const TYPEWRITER_DING_MARGIN_CHARACTERS = 5;
-const TYPEWRITER_RETURN_MS = 180;
+const TYPEWRITER_KEYS_WITHOUT_ACTIVE_FRAME = new Set([
+  'enter',
+  'shift',
+  'space',
+]);
+const TYPEWRITER_RETURN_MIN_MS = 180;
+const TYPEWRITER_RETURN_MAX_MS = 360;
+const TYPEWRITER_RETURN_SOUND_MIN_RATIO = 0.2;
+const TYPEWRITER_RETURN_LONG_SOUND_RATIO = 0.7;
 const TYPEWRITER_LINE_FEED_MS = 120;
 const TYPEWRITER_REVEAL_CENTER_MS = 420;
 const TYPEWRITER_REVEAL_PULL_MS = 360;
+const TYPEWRITER_STATIONARY_REVEAL_EXTRA_PULL_PX = 12;
 const TYPEWRITER_PAPER_START_HEIGHT_PX = 60;
 const TYPEWRITER_PAPER_LINE_HEIGHT_PX = 24;
 const TYPEWRITER_REVEAL_TARGET_HEIGHT_PX = 350;
@@ -44,11 +59,16 @@ function TypedPage({
   countdownElapsedMs = 0,
   countdownValue = null,
   currentWordFragment,
-  isTypewriterActive = false,
   isRevealed = false,
+  isCapsLockEnabled = false,
   isWelcome = false,
   isWelcomeTransitioning = false,
   lineWordCounts,
+  missedWordIndexes = [],
+  onTryAgain,
+  pressedTypewriterKeys = [],
+  revealNoteLines = [],
+  shouldLiftAfterReveal = true,
   welcomeContent = null,
 }) {
   // State and refs
@@ -66,6 +86,9 @@ function TypedPage({
   const [paperOffset, setPaperOffset] = useState({ x: 0, y: 0 });
   const [paperLineCount, setPaperLineCount] = useState(1);
   const [motionPhase, setMotionPhase] = useState("typing");
+  const [returnDurationMs, setReturnDurationMs] = useState(
+    TYPEWRITER_RETURN_MIN_MS,
+  );
   const [revealPhase, setRevealPhase] = useState("centering");
 
   // Derived values
@@ -83,6 +106,10 @@ function TypedPage({
     [completedWords, currentWordFragment, lineWordCounts],
   );
   const typedText = typewriterLines.join("\n");
+  const renderedLineWords = useMemo(
+    () => getRenderedLineWords(typewriterLines, missedWordIndexes),
+    [missedWordIndexes, typewriterLines],
+  );
   const currentLineIndex = typewriterLines.length - 1;
   const currentLineText = typewriterLines[currentLineIndex] ?? "";
   const renderedLineCount = Math.max(1, typewriterLines.length);
@@ -103,6 +130,9 @@ function TypedPage({
   const isWelcomeIntake = isCountingDown && isWelcomeTransitioning;
   const isWelcomeContentVisible =
     isWelcome || (isWelcomeIntake && countdownValue >= 3);
+  const isTypewriterActive = pressedTypewriterKeys.some(
+    (key) => !TYPEWRITER_KEYS_WITHOUT_ACTIVE_FRAME.has(key),
+  );
   const countdownPaperHeight = getCountdownPaperHeight(
     countdownPaperPhase,
     isWelcomeTransitioning,
@@ -117,7 +147,14 @@ function TypedPage({
     paperHeight = countdownPaperHeight;
   }
 
-  const revealPullOffsetY = Math.min(0, currentPaperHeight - revealPaperHeight);
+  const revealPullOffsetY = Math.min(
+    0,
+    currentPaperHeight - revealPaperHeight,
+  );
+  const stationaryRevealOffsetY =
+    TYPEWRITER_PAPER_START_HEIGHT_PX -
+    revealPaperHeight -
+    TYPEWRITER_STATIONARY_REVEAL_EXTRA_PULL_PX;
   const countdownPaperOffsetY =
     TYPEWRITER_PAPER_START_HEIGHT_PX - countdownPaperHeight;
 
@@ -130,7 +167,9 @@ function TypedPage({
   );
 
   useEffect(() => {
-    preloadAudioSource(dingSound, typewriterAudioPlayersRef);
+    [dingSound, rodSlideSound, rodSlideLongSound].forEach((source) => {
+      preloadAudioSource(source, typewriterAudioPlayersRef);
+    });
   }, []);
 
   useEffect(() => {
@@ -184,15 +223,20 @@ function TypedPage({
     const pullTimeoutId = window.setTimeout(() => {
       setRevealPhase("pulling");
     }, TYPEWRITER_REVEAL_CENTER_MS);
-    const liftTimeoutId = window.setTimeout(() => {
-      setRevealPhase("lifting");
-    }, TYPEWRITER_REVEAL_CENTER_MS + TYPEWRITER_REVEAL_PULL_MS);
+    const liftTimeoutId = shouldLiftAfterReveal
+      ? window.setTimeout(() => {
+          setRevealPhase("lifting");
+        }, TYPEWRITER_REVEAL_CENTER_MS + TYPEWRITER_REVEAL_PULL_MS)
+      : null;
 
     return () => {
       window.clearTimeout(pullTimeoutId);
-      window.clearTimeout(liftTimeoutId);
+
+      if (liftTimeoutId !== null) {
+        window.clearTimeout(liftTimeoutId);
+      }
     };
-  }, [isRevealed, renderedLineCount]);
+  }, [isRevealed, renderedLineCount, shouldLiftAfterReveal]);
 
   // Paper measurement and motion
   useLayoutEffect(() => {
@@ -267,22 +311,37 @@ function TypedPage({
       previousLineIndexRef.current = currentLineIndex;
 
       if (hasMovedToNewLine) {
+        const returnProfile = getCarriageReturnProfile(
+          getPreviousCompletedLineWidthRatio(
+            paperElement,
+            currentLineIndex - 1,
+          ),
+        );
+
         clearAnimationTimeouts(animationTimeoutsRef);
+        setReturnDurationMs(returnProfile.durationMs);
         setMotionPhase("returning");
         setPaperOffset((currentOffset) => ({
           x: nextPaperOffset.x,
           y: currentOffset.y,
         }));
 
+        if (returnProfile.soundSource) {
+          playAudioSource(
+            returnProfile.soundSource,
+            typewriterAudioPlayersRef,
+          );
+        }
+
         animationTimeoutsRef.current = [
           window.setTimeout(() => {
             setMotionPhase("line-feeding");
             setPaperLineCount(nextPaperLineCount);
             setPaperOffset(nextPaperOffset);
-          }, TYPEWRITER_RETURN_MS),
+          }, returnProfile.durationMs),
           window.setTimeout(() => {
             setMotionPhase("typing");
-          }, TYPEWRITER_RETURN_MS + TYPEWRITER_LINE_FEED_MS),
+          }, returnProfile.durationMs + TYPEWRITER_LINE_FEED_MS),
         ];
         return;
       }
@@ -339,6 +398,10 @@ function TypedPage({
           : ""
       }`
     : "";
+  const stationaryRevealClassName =
+    isRevealed && !shouldLiftAfterReveal
+      ? " typewriter-paper-reveal-stationary"
+      : "";
   const typingCarriageOffsetX =
     basePaperOffsetXRef.current === null
       ? 0
@@ -361,10 +424,11 @@ function TypedPage({
       ref={viewportRef}
       style={{
         "--typewriter-carriage-offset-x": `${carriageOffsetX}px`,
+        "--typewriter-return-duration": `${returnDurationMs}ms`,
       }}
     >
       <div
-        className={`typed-page typewriter-paper ${paperPhaseClassName}${welcomeIntakeClassName}`}
+        className={`typed-page typewriter-paper ${paperPhaseClassName}${stationaryRevealClassName}${welcomeIntakeClassName}`}
         ref={paperRef}
         style={{
           "--typewriter-typing-paper-offset-y": `${paperOffset.y}px`,
@@ -373,6 +437,7 @@ function TypedPage({
             : `${paperHeight}px`,
           "--typewriter-countdown-paper-offset-y": `${countdownPaperOffsetY}px`,
           "--typewriter-reveal-pull-offset-y": `${revealPullOffsetY}px`,
+          "--typewriter-stationary-reveal-offset-y": `${stationaryRevealOffsetY}px`,
           "--typewriter-line-width": `${TYPEWRITER_LINE_LENGTH}ch`,
         }}
       >
@@ -382,7 +447,20 @@ function TypedPage({
           <p className="pixel-text typed-page-text">
             {typewriterLines.map((line, index) => (
               <span className="typed-page-line" key={`${index}-${line}`}>
-                {line}
+                {renderedLineWords[index].map(
+                  ({ isMissed, text, wordIndex }, lineWordIndex) => (
+                    <Fragment key={wordIndex}>
+                      {lineWordIndex > 0 ? " " : ""}
+                      <span
+                        className={
+                          isMissed ? "typed-page-missed-word" : undefined
+                        }
+                      >
+                        {text}
+                      </span>
+                    </Fragment>
+                  ),
+                )}
                 {index === currentLineIndex ? (
                   <span
                     aria-hidden="true"
@@ -395,10 +473,22 @@ function TypedPage({
           </p>
         )}
         {isRevealed ? (
-          <p className="pixel-text typed-page-reveal-note">
-            <span>With all the love in my heart</span>
-            <span>Ben</span>
-          </p>
+          <div className="typed-page-reveal-footer">
+            <p className="pixel-text typed-page-reveal-note">
+              {revealNoteLines.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </p>
+            {onTryAgain ? (
+              <button
+                className="pixel-text typed-page-reveal-link"
+                onClick={onTryAgain}
+                type="button"
+              >
+                Try again?
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
       <img
@@ -422,6 +512,38 @@ function TypedPage({
           isTypewriterActive ? "" : " typewriter-sprite-hidden"
         }`}
         src={typewriterActiveSprite}
+      />
+      {TYPEWRITER_KEY_SPRITES.map(({ id, normal, pressed }) => {
+        const isPressed = pressedTypewriterKeys.includes(id);
+
+        return (
+          <Fragment key={id}>
+            <img
+              alt=""
+              aria-hidden="true"
+              className={`typewriter-sprite typewriter-key-sprite${
+                isPressed ? " typewriter-sprite-hidden" : ""
+              }`}
+              src={normal}
+            />
+            <img
+              alt=""
+              aria-hidden="true"
+              className={`typewriter-sprite typewriter-key-sprite${
+                isPressed ? "" : " typewriter-sprite-hidden"
+              }`}
+              src={pressed}
+            />
+          </Fragment>
+        );
+      })}
+      <img
+        alt=""
+        aria-hidden="true"
+        className={`typewriter-sprite typewriter-key-sprite${
+          isCapsLockEnabled ? "" : " typewriter-sprite-hidden"
+        }`}
+        src={TYPEWRITER_CAPS_LOCK_SPRITE}
       />
     </section>
   );
@@ -490,6 +612,76 @@ function getPaperHeight(lineCount) {
 
 function getRevealPaperHeight(contentHeight) {
   return Math.max(contentHeight, TYPEWRITER_REVEAL_TARGET_HEIGHT_PX);
+}
+
+function getRenderedLineWords(typewriterLines, missedWordIndexes) {
+  const missedWordIndexSet = new Set(missedWordIndexes);
+  let wordIndex = 0;
+
+  return typewriterLines.map((line) => {
+    if (!line) {
+      return [];
+    }
+
+    return line.split(" ").map((text) => {
+      const renderedWord = {
+        isMissed: missedWordIndexSet.has(wordIndex),
+        text,
+        wordIndex,
+      };
+
+      wordIndex += 1;
+      return renderedWord;
+    });
+  });
+}
+
+function getPreviousCompletedLineWidthRatio(paperElement, startLineIndex) {
+  const lineElements = paperElement.querySelectorAll(".typed-page-line");
+  let lineElement = null;
+
+  for (let lineIndex = startLineIndex; lineIndex >= 0; lineIndex -= 1) {
+    if (lineElements[lineIndex]?.textContent.trim()) {
+      lineElement = lineElements[lineIndex];
+      break;
+    }
+  }
+
+  if (!lineElement) {
+    return 0;
+  }
+
+  const paperStyle = window.getComputedStyle(paperElement);
+  const paperPaddingLeft = Number.parseFloat(paperStyle.paddingLeft) || 0;
+  const paperPaddingRight = Number.parseFloat(paperStyle.paddingRight) || 0;
+  const availableLineWidth =
+    paperElement.getBoundingClientRect().width -
+    paperPaddingLeft -
+    paperPaddingRight;
+  const lineRange = document.createRange();
+
+  lineRange.selectNodeContents(lineElement);
+
+  return Math.min(
+    1,
+    Math.max(0, lineRange.getBoundingClientRect().width / availableLineWidth),
+  );
+}
+
+function getCarriageReturnProfile(lineWidthRatio) {
+  const durationMs = Math.round(
+    TYPEWRITER_RETURN_MIN_MS +
+      (TYPEWRITER_RETURN_MAX_MS - TYPEWRITER_RETURN_MIN_MS) * lineWidthRatio,
+  );
+  let soundSource = null;
+
+  if (lineWidthRatio >= TYPEWRITER_RETURN_LONG_SOUND_RATIO) {
+    soundSource = rodSlideLongSound;
+  } else if (lineWidthRatio >= TYPEWRITER_RETURN_SOUND_MIN_RATIO) {
+    soundSource = rodSlideSound;
+  }
+
+  return { durationMs, soundSource };
 }
 
 // Animation and audio helpers

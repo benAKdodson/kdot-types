@@ -183,6 +183,12 @@ function KeyTitle({ isIdleAnimationEnabled, onManualKeyPress, patternRequest }) 
         return;
       }
 
+      if (!Array.isArray(frame.keys) || !Number.isFinite(frame.durationMs)) {
+        setAnimatedPressedKeyIndexes([]);
+        scheduleNextPattern();
+        return;
+      }
+
       setAnimatedPressedKeyIndexes(frame.keys);
 
       animationTimeoutIdRef.current = window.setTimeout(() => {

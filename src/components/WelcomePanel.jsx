@@ -1,4 +1,4 @@
-import playButtonSrc from '../Assets/Play-Button.png';
+import playButtonSrc from '../Assets/Sprites/UI/Play-Button.png';
 
 function WelcomePanel({ isStarting = false, onStart }) {
   return (

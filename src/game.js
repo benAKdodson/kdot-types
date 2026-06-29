@@ -1,8 +1,10 @@
-import { WORD_SOURCE } from "./wordSource.js";
+import { WORD_SOURCE } from './wordSource.js';
 
 export const MAX_HEALTH = 3;
 export const EXTRA_HEART_MAX_HEALTH = MAX_HEALTH + 1;
 export const WORD_TIME_MS = 5000;
+export const EXTENDED_WORD_TIME_MS = 10000;
+export const SHORTENED_WORD_TIME_MS = 3000;
 export const WORD_TIME_SECONDS = Math.ceil(WORD_TIME_MS / 1000);
 export const WORD_TIME_TENTHS = WORD_TIME_SECONDS * 10;
 export const START_COUNTDOWN_MS = 3000;
@@ -17,19 +19,23 @@ export const INITIAL_GAME_STATE = {
   charIndex: 0,
   health: MAX_HEALTH,
   maxHealth: MAX_HEALTH,
+  missedWordIndexes: [],
   typedWords: [],
+  wordTimeMs: WORD_TIME_MS,
 };
 
 export function gameReducer(state, action) {
   switch (action.type) {
     case "start": {
       const maxHealth = state.maxHealth ?? MAX_HEALTH;
+      const wordTimeMs = state.wordTimeMs ?? WORD_TIME_MS;
 
       return {
         ...INITIAL_GAME_STATE,
         status: "countdown",
         health: maxHealth,
         maxHealth,
+        wordTimeMs,
       };
     }
 
@@ -73,6 +79,18 @@ export function gameReducer(state, action) {
       };
     }
 
+    case "cheat_extend_timer":
+      return {
+        ...state,
+        wordTimeMs: EXTENDED_WORD_TIME_MS,
+      };
+
+    case "cheat_shorten_timer":
+      return {
+        ...state,
+        wordTimeMs: SHORTENED_WORD_TIME_MS,
+      };
+
     case "typed_key":
       return getNextGameState(state, action.key);
 
@@ -81,11 +99,13 @@ export function gameReducer(state, action) {
 
     case "restart": {
       const maxHealth = state.maxHealth ?? MAX_HEALTH;
+      const wordTimeMs = state.wordTimeMs ?? WORD_TIME_MS;
 
       return {
         ...INITIAL_GAME_STATE,
         health: maxHealth,
         maxHealth,
+        wordTimeMs,
       };
     }
 
@@ -118,29 +138,45 @@ function getTimeoutGameState(state) {
     return state;
   }
 
+  const currentWord = WORDS[state.wordIndex];
+
+  if (!currentWord) {
+    return {
+      ...state,
+      status: "complete",
+    };
+  }
+
   const nextHealth = Math.max(0, state.health - 1);
+  const missedWordState = {
+    ...state,
+    charIndex: 0,
+    health: nextHealth,
+    missedWordIndexes: [
+      ...(state.missedWordIndexes ?? []),
+      state.wordIndex,
+    ],
+    typedWords: [...state.typedWords, currentWord],
+  };
 
   if (nextHealth === 0) {
     return {
-      ...state,
-      health: nextHealth,
+      ...missedWordState,
       status: "failed",
     };
   }
 
   if (state.wordIndex === WORDS.length - 1) {
     return {
-      ...state,
-      health: nextHealth,
+      ...missedWordState,
+      charIndex: currentWord.length,
       status: "complete",
     };
   }
 
   return {
-    ...state,
-    health: nextHealth,
+    ...missedWordState,
     wordIndex: state.wordIndex + 1,
-    charIndex: 0,
   };
 }
 

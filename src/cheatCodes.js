@@ -9,6 +9,14 @@ export const CHEAT_CODES = [
     effect: "complete-game",
     sequence: "OK...",
   },
+  {
+    effect: "extend-timer",
+    sequence: "DOPE",
+  },
+  {
+    effect: "shorten-timer",
+    sequence: "...KO",
+  },
 ];
 
 const MAX_CHEAT_CODE_LENGTH = Math.max(
